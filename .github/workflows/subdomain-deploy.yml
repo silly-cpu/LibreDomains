@@ -42,10 +42,14 @@ jobs:
             subdomain=$(basename "$file" .json)
             record=$(jq -r '.record' "$file")
 
+            echo "Checking subdomain: $record"
+
             # Check if the subdomain already exists
             response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?name=$record" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H "Content-Type: application/json")
+
+            echo "Response: $response"
 
             if echo "$response" | jq -e '.result | length > 0' > /dev/null; then
               echo "Error: Subdomain $record already exists."
@@ -64,6 +68,8 @@ jobs:
             type=$(jq -r '.type' "$file")
             content=$(jq -r '.content' "$file")
             ttl=$(jq -r '.ttl' "$file")
+
+            echo "Deploying subdomain: $record"
 
             response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
