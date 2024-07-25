@@ -26,6 +26,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug event data
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Event action: ${{ github.event.action }}"
+          echo "Pull request merged: ${{ github.event.pull_request.merged }}"
+
       - name: Check for duplicate subdomains
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
