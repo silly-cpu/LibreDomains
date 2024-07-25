@@ -2,6 +2,7 @@ name: Subdomain Deployment
 
 on:
   pull_request:
+    types: [closed]
     paths:
       - 'subdomains/*.json'
 
