@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Validate JSON format
         run: |
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Deploy to Cloudflare
         env:
@@ -37,7 +37,7 @@ jobs:
             content=$(jq -r '.content' "$file")
             ttl=$(jq -r '.ttl' "$file")
 
-            curl -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
+            response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H "Content-Type: application/json" \
               --data '{
@@ -45,5 +45,8 @@ jobs:
                 "name": "'"$subdomain"'",
                 "content": "'"$content"'",
                 "ttl": '"$ttl"'
-              }'
+              }')
+
+            cat response.txt
+            echo "HTTP Status Code: $response"
           done
