@@ -22,7 +22,7 @@ jobs:
   deploy:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    environment: production  # 指定环境
+    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -45,8 +45,8 @@ jobs:
             echo "Checking subdomain: $record"
 
             # Check if the subdomain already exists
-            response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?name=$record" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records?name=$record" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
               -H "Content-Type: application/json")
 
             echo "Response: $response"
@@ -71,8 +71,8 @@ jobs:
 
             echo "Deploying subdomain: $record"
 
-            response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
               -H "Content-Type: application/json" \
               --data '{
                 "type": "'"$type"'",
