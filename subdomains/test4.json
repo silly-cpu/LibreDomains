@@ -1,6 +1,0 @@
-{
-    "record": "test4",
-    "type": "CNAME",
-    "content": "zwei.de.eu.org",
-    "ttl": 3600
-  }
