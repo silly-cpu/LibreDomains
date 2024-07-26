@@ -6,6 +6,10 @@ import requests
 CLOUDFLARE_API_TOKEN = os.getenv('CLOUDFLARE_API_TOKEN')
 ZONE_ID = os.getenv('CLOUDFLARE_ZONE_ID')
 
+if not CLOUDFLARE_API_TOKEN or not ZONE_ID:
+    print("Error: CLOUDFLARE_API_TOKEN or ZONE_ID is not set")
+    exit(1)
+
 headers = {
     "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
     "Content-Type": "application/json"
