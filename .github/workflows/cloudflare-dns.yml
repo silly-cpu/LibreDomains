@@ -28,7 +28,7 @@ jobs:
               SUCCESS=false
             fi
           done
-          echo "::set-output name=success::$SUCCESS"
+          echo "success=$SUCCESS" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -40,7 +40,7 @@ jobs:
 
       - name: Deploy to Cloudflare
         id: deploy
-        if: steps.validate.outputs.success == 'true'
+        if: env.success == 'true'
         run: |
           python deploy_to_cloudflare.py
 
@@ -52,9 +52,7 @@ jobs:
           for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'domains/'); do
             COMMENT+="* $file\n"
           done
-          echo $COMMENT
-          echo "::set-output name=comment::$COMMENT"
-        id: create_comment
+          echo $COMMENT > deployment_comment.txt
 
       - name: Post comment on PR
         uses: actions/github-script@v6
@@ -64,5 +62,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: process.env.COMMENT
+              body: require('fs').readFileSync('deployment_comment.txt', 'utf8')
             })
