@@ -1,6 +1,6 @@
 {
-    "record": "test7.is-an.org",
-    "type": "CNAME",
-    "content": "zwei.de.eu.org",
-    "ttl": 3600
-  }
+  "record": "test7",
+  "type": "CNAME",
+  "content": "zwei.de.eu.org",
+  "ttl": 3600
+}
