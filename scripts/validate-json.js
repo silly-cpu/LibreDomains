@@ -38,12 +38,17 @@ function validateJson(filePath) {
 
 if (require.main === module) {
   const sha = process.argv[2];
-  exec(`git show --name-only ${sha} | head -n 1`, (error, stdout, stderr) => {
+  exec(`git show --name-only ${sha}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Failed to execute git command: ${error.message}`);
       process.exit(1);
     }
-    const filePath = path.resolve(__dirname, '..', 'subdomains', stdout.trim());
+    const fileNames = stdout.trim().split('\n');
+    if (fileNames.length === 0) {
+      console.error(`Validation failed: No files were modified in this commit.`);
+      process.exit(1);
+    }
+    const filePath = path.resolve(__dirname, '..', 'subdomains', fileNames[0]);
     validateJson(filePath);
   });
 }
