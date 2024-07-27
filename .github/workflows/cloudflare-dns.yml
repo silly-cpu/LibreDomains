@@ -8,6 +8,7 @@ on:
 jobs:
   validate-and-deploy:
     runs-on: ubuntu-latest
+    environment: production  # 指定环境
 
     steps:
       - name: Checkout repository
@@ -42,8 +43,8 @@ jobs:
         id: deploy
         if: env.success == 'true'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}  # 使用环境秘密
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}      # 使用环境秘密
         run: |
           python deploy_to_cloudflare.py
 
