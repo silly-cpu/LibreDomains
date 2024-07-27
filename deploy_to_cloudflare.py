@@ -6,6 +6,10 @@ import requests
 CLOUDFLARE_API_TOKEN = os.getenv('CLOUDFLARE_API_TOKEN')
 ZONE_ID = os.getenv('CLOUDFLARE_ZONE_ID')
 
+# 调试信息
+print(f"CLOUDFLARE_API_TOKEN: {CLOUDFLARE_API_TOKEN}")
+print(f"ZONE_ID: {ZONE_ID}")
+
 if not CLOUDFLARE_API_TOKEN or not ZONE_ID:
     print("Error: CLOUDFLARE_API_TOKEN or ZONE_ID is not set")
     exit(1)
