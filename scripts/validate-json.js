@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 function validateJson(filePath) {
   try {
@@ -37,6 +38,12 @@ function validateJson(filePath) {
 
 if (require.main === module) {
   const sha = process.argv[2];
-  const filePath = `../subdomains/$(git show --name-only ${sha} | head -n 1)`;
-  validateJson(filePath);
+  exec(`git show --name-only ${sha} | head -n 1`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Failed to execute git command: ${error.message}`);
+      process.exit(1);
+    }
+    const filePath = path.resolve(__dirname, '..', 'subdomains', stdout.trim());
+    validateJson(filePath);
+  });
 }
