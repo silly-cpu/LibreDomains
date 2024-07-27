@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const execa = require('execa'); // npm install execa
+const { exec } = require('child_process');
 
 async function checkPermission(filePath) {
   try {
