@@ -1,8 +1,8 @@
 domains:
   ciao.su:
     enabled: true
-    cloudflare_zone_id: "your_zone_id_here"
-    description: "Free subdomain service"
+    cloudflare_zone_id: "fe810c0a3352cd3c33e3f27c5be38a3c"
+    description: "Ciao~ Free subdomain service for personal and small projects"
     restrictions:
       - "No adult content"
       - "No illegal activities"
@@ -18,7 +18,7 @@ domains:
     
   ciallo.de:
     enabled: false
-    cloudflare_zone_id: "your_zone_id_here"
+    cloudflare_zone_id: "fe810c0a3352cd3c33e3f27c5be38a3c"
     description: "Coming soon"
     restrictions:
       - "Currently not accepting applications"
