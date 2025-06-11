@@ -47,9 +47,31 @@ class CloudflareTokenValidator {
           p.permission_groups?.map(pg => pg.id || pg.name)
         ).flat().filter(Boolean) || [];
         
+        // 更智能的权限检查：考虑高级权限包含低级权限
+        const checkPermission = (required, available) => {
+          const [requiredResource, requiredAction] = required.split(':');
+          
+          return available.some(perm => {
+            const permLower = perm.toLowerCase();
+            const resourceMatch = permLower.includes(requiredResource);
+            
+            // Zone:Edit 包含 Zone:Read 权限
+            if (requiredResource === 'zone' && requiredAction === 'read') {
+              return resourceMatch && (permLower.includes('read') || permLower.includes('edit'));
+            }
+            
+            // DNS:Edit 包含 DNS 记录的所有操作
+            if (requiredResource === 'dns_records' && requiredAction === 'edit') {
+              return (permLower.includes('dns') || permLower.includes('zone')) && 
+                     (permLower.includes('edit') || permLower.includes('write'));
+            }
+            
+            return resourceMatch && permLower.includes(requiredAction);
+          });
+        };
+        
         const missingPermissions = requiredPermissions.filter(perm => 
-          !tokenPermissions.some(tp => tp.toLowerCase().includes(perm.split(':')[0]) && 
-                                       tp.toLowerCase().includes(perm.split(':')[1]))
+          !checkPermission(perm, tokenPermissions)
         );
         
         if (missingPermissions.length > 0) {
