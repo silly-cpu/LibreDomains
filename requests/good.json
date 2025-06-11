@@ -1,0 +1,15 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "1good",
+  "owner": {
+    "username": "tsengvee",
+    "email": "tsengvee@nb.com"
+  }, 
+  "record": {
+    "type": "A",
+    "value": "192.168.1.1",
+    "ttl": 3600,
+    "proxied": true
+  },
+  "description": "TestTestTestTestTestTest"
+}
