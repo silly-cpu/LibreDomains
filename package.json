@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/LibreDomains-beta.git"
+    "url": "git+https://github.com/bestZwei/LibreDomains-beta.git"
   },
   "keywords": [
     "dns",
@@ -24,13 +24,14 @@
   "author": "LibreDomains Team",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/your-username/LibreDomains-beta/issues"
+    "url": "https://github.com/bestZwei/LibreDomains-beta/issues"
   },
-  "homepage": "https://github.com/your-username/LibreDomains-beta#readme",
+  "homepage": "https://github.com/bestZwei/LibreDomains-beta#readme",
   "dependencies": {
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
     "axios": "^1.6.0",
     "js-yaml": "^4.1.0"
-  }
+  },
+  "lockfileVersion": 1
 }
