@@ -30,22 +30,122 @@ jobs:
       with:
         files: requests/**/*.json
     
+    - name: Debug environment
+      if: steps.changed-files.outputs.any_changed == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔍 Environment Debug Info:"
+        echo "  Node.js version: $(node --version)"
+        echo "  npm version: $(npm --version)"
+        echo "  Cloudflare API token: ${CLOUDFLARE_API_TOKEN:0:8}..."
+        echo "  Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+        echo ""
+        echo "🔧 Running troubleshooter..."
+        node scripts/troubleshoot.js
+    
     - name: Deploy DNS records
       if: steps.changed-files.outputs.any_changed == 'true'
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
-        echo "Deploying DNS records..."
+        echo "🚀 Starting DNS deployment..."
+        deployment_errors=""
+        exit_code=0
+        
         for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-          echo "Deploying $file"
-          node scripts/deploy-dns.js deploy "$file"
+          echo ""
+          echo "📁 Processing file: $file"
+          echo "─────────────────────────────────"
+          
+          if [[ ! -f "$file" ]]; then
+            echo "⚠️  File deleted, skipping deployment"
+            continue
+          fi
+          
+          # Extract domain and subdomain for logging
+          domain=$(jq -r '.domain' "$file")
+          subdomain=$(jq -r '.subdomain' "$file")
+          echo "🌐 Target: ${subdomain}.${domain}"
+          
+          if ! node scripts/deploy-dns.js deploy "$file"; then
+            echo "❌ Deployment failed for $file"
+            deployment_errors="$deployment_errors\n- $file (${subdomain}.${domain})"
+            exit_code=1
+          else
+            echo "✅ Deployment successful for $file"
+          fi
         done
+        
+        if [ $exit_code -ne 0 ]; then
+          echo ""
+          echo "❌ Deployment Summary: FAILED"
+          echo "Failed deployments:$deployment_errors"
+          exit 1
+        else
+          echo ""
+          echo "✅ Deployment Summary: ALL SUCCESSFUL"
+        fi
+    
+    - name: Run health check
+      if: steps.changed-files.outputs.any_changed == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🏥 Running post-deployment health check..."
+        node scripts/health-check.js || echo "⚠️  Some records may need time to propagate"
     
     - name: Commit deployed records
       if: steps.changed-files.outputs.any_changed == 'true'
       run: |
+        echo "💾 Committing deployed domain records..."
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add domains/
-        git diff --staged --quiet || git commit -m "Deploy DNS records [skip ci]"
-        git push
+        if git diff --staged --quiet; then
+          echo "ℹ️  No new domain files to commit"
+        else
+          git commit -m "Deploy DNS records [skip ci]"
+          git push
+          echo "✅ Domain records committed and pushed"
+        fi
+    
+    - name: Comment on triggering commits
+      if: always() && steps.changed-files.outputs.any_changed == 'true'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const success = '${{ job.status }}' === 'success';
+          const files = '${{ steps.changed-files.outputs.all_changed_files }}'.split(' ');
+          
+          let comment = success ? 
+            '✅ **DNS Deployment Successful**\n\n' : 
+            '❌ **DNS Deployment Failed**\n\n';
+          
+          comment += 'Processed files:\n';
+          for (const file of files) {
+            if (file.trim()) {
+              comment += `- ${file}\n`;
+            }
+          }
+          
+          if (!success) {
+            comment += '\n**Troubleshooting:**\n';
+            comment += '1. Check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n';
+            comment += '2. Verify Cloudflare API token permissions\n';
+            comment += '3. Run `node scripts/troubleshoot.js` locally\n';
+            comment += '4. Check `node scripts/health-check.js` for record status\n';
+          }
+          
+          // Comment on the latest commit
+          try {
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Failed to create commit comment:', error.message);
+          }

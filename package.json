@@ -7,6 +7,9 @@
     "validate": "node scripts/validate-request.js",
     "deploy": "node scripts/deploy-dns.js",
     "check-user": "node scripts/check-github-user.js",
+    "health-check": "node scripts/health-check.js",
+    "troubleshoot": "node scripts/troubleshoot.js",
+    "fix-record": "node scripts/troubleshoot.js fix",
     "test": "npm run validate requests/example-personal-website.json"
   },
   "repository": {

@@ -9,14 +9,28 @@ class DNSDeployer {
 
   async deploySubdomain(domain, subdomain, requestData) {
     try {
-      console.log(`Deploying ${subdomain}.${domain}...`);
+      console.log(`🚀 Deploying ${subdomain}.${domain}...`);
+      
+      // Check if record already exists
+      try {
+        const existingRecords = await this.cloudflare.getDNSRecords(domain, subdomain);
+        if (existingRecords.length > 0) {
+          console.log(`⚠️  Record already exists, attempting update instead...`);
+          return await this.updateSubdomain(domain, subdomain, requestData);
+        }
+      } catch (error) {
+        console.log(`ℹ️  No existing record found, proceeding with creation...`);
+      }
       
       // 创建 DNS 记录
+      console.log(`📡 Creating DNS record with Cloudflare...`);
       const dnsRecord = await this.cloudflare.createDNSRecord(domain, subdomain, requestData.record);
+      console.log(`✅ DNS record created with ID: ${dnsRecord.id}`);
       
       // 保存记录到文件系统
       const domainDir = path.join(__dirname, '../domains', domain);
       if (!fs.existsSync(domainDir)) {
+        console.log(`📁 Creating domain directory: ${domainDir}`);
         fs.mkdirSync(domainDir, { recursive: true });
       }
       
@@ -29,11 +43,17 @@ class DNSDeployer {
       
       const filePath = path.join(domainDir, `${subdomain}.json`);
       fs.writeFileSync(filePath, JSON.stringify(recordData, null, 2));
+      console.log(`💾 Record saved to: ${filePath}`);
       
       console.log(`✅ Successfully deployed ${subdomain}.${domain}`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to deploy ${subdomain}.${domain}:`, error.message);
+      console.error(`❌ Failed to deploy ${subdomain}.${domain}:`);
+      console.error(`   Error: ${error.message}`);
+      if (error.response) {
+        console.error(`   Status: ${error.response.status}`);
+        console.error(`   Data: ${JSON.stringify(error.response.data, null, 2)}`);
+      }
       return false;
     }
   }
@@ -41,17 +61,25 @@ class DNSDeployer {
   async updateSubdomain(domain, subdomain, requestData) {
     try {
       const filePath = path.join(__dirname, '../domains', domain, `${subdomain}.json`);
-      const existingData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       
-      console.log(`Updating ${subdomain}.${domain}...`);
+      if (!fs.existsSync(filePath)) {
+        console.log(`⚠️  Local record not found, treating as new deployment...`);
+        return await this.deploySubdomain(domain, subdomain, requestData);
+      }
+      
+      const existingData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      console.log(`🔄 Updating ${subdomain}.${domain}...`);
+      console.log(`   Existing record ID: ${existingData.cloudflare_record_id}`);
       
       // 更新 DNS 记录
+      console.log(`📡 Updating DNS record with Cloudflare...`);
       const dnsRecord = await this.cloudflare.updateDNSRecord(
         domain, 
         subdomain, 
         requestData.record, 
         existingData.cloudflare_record_id
       );
+      console.log(`✅ DNS record updated successfully`);
       
       // 更新文件
       const recordData = {
@@ -63,11 +91,17 @@ class DNSDeployer {
       };
       
       fs.writeFileSync(filePath, JSON.stringify(recordData, null, 2));
+      console.log(`💾 Local record updated`);
       
       console.log(`✅ Successfully updated ${subdomain}.${domain}`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to update ${subdomain}.${domain}:`, error.message);
+      console.error(`❌ Failed to update ${subdomain}.${domain}:`);
+      console.error(`   Error: ${error.message}`);
+      if (error.response) {
+        console.error(`   Status: ${error.response.status}`);
+        console.error(`   Data: ${JSON.stringify(error.response.data, null, 2)}`);
+      }
       return false;
     }
   }
