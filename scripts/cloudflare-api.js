@@ -53,6 +53,38 @@ class CloudflareAPI {
         throw new Error(`Cloudflare API error: ${JSON.stringify(response.data.errors)}`);
       }
     } catch (error) {
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const cfError = error.response.data.errors[0];
+        
+        // Handle proxied record with private IP error
+        if (cfError.code === 9003 && recordData.proxied) {
+          console.log(`⚠️  Private IP detected with proxy enabled, retrying without proxy...`);
+          recordData.proxied = false;
+          
+          try {
+            const retryResponse = await axios.post(
+              `${this.baseURL}/zones/${zoneId}/dns_records`,
+              recordData,
+              {
+                headers: {
+                  'Authorization': `Bearer ${this.apiToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (retryResponse.data.success) {
+              console.log(`✅ Record created successfully without proxy`);
+              return retryResponse.data.result;
+            }
+          } catch (retryError) {
+            console.error(`❌ Retry failed:`, retryError.response?.data || retryError.message);
+          }
+        }
+        
+        throw new Error(`Cloudflare API error (${cfError.code}): ${cfError.message}`);
+      }
+      
       if (error.response) {
         throw new Error(`Cloudflare API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
       }
@@ -95,6 +127,38 @@ class CloudflareAPI {
         throw new Error(`Cloudflare API error: ${JSON.stringify(response.data.errors)}`);
       }
     } catch (error) {
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const cfError = error.response.data.errors[0];
+        
+        // Handle proxied record with private IP error
+        if (cfError.code === 9003 && recordData.proxied) {
+          console.log(`⚠️  Private IP detected with proxy enabled, retrying without proxy...`);
+          recordData.proxied = false;
+          
+          try {
+            const retryResponse = await axios.put(
+              `${this.baseURL}/zones/${zoneId}/dns_records/${recordId}`,
+              recordData,
+              {
+                headers: {
+                  'Authorization': `Bearer ${this.apiToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (retryResponse.data.success) {
+              console.log(`✅ Record updated successfully without proxy`);
+              return retryResponse.data.result;
+            }
+          } catch (retryError) {
+            console.error(`❌ Retry failed:`, retryError.response?.data || retryError.message);
+          }
+        }
+        
+        throw new Error(`Cloudflare API error (${cfError.code}): ${cfError.message}`);
+      }
+      
       if (error.response) {
         throw new Error(`Cloudflare API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
       }

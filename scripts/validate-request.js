@@ -64,11 +64,15 @@ class RequestValidator {
       case 'A':
         if (!/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(record.value)) {
           errors.push('Invalid IPv4 address format');
+        } else if (record.proxied && this.isPrivateIP(record.value)) {
+          errors.push('Private IP addresses cannot be used with Cloudflare proxy (proxied: true). Either use a public IP or set proxied to false');
         }
         break;
       case 'AAAA':
         if (!/^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/.test(record.value)) {
           errors.push('Invalid IPv6 address format');
+        } else if (record.proxied && this.isPrivateIPv6(record.value)) {
+          errors.push('Private IPv6 addresses cannot be used with Cloudflare proxy (proxied: true). Either use a public IP or set proxied to false');
         }
         break;
       case 'CNAME':
@@ -85,6 +89,30 @@ class RequestValidator {
         }
         break;
     }
+  }
+
+  isPrivateIP(ip) {
+    const parts = ip.split('.').map(Number);
+    return (
+      // 10.0.0.0/8
+      parts[0] === 10 ||
+      // 172.16.0.0/12
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      // 192.168.0.0/16
+      (parts[0] === 192 && parts[1] === 168) ||
+      // 127.0.0.0/8 (localhost)
+      parts[0] === 127
+    );
+  }
+
+  isPrivateIPv6(ip) {
+    // Simplified check for common private IPv6 ranges
+    return (
+      ip.startsWith('::1') || // localhost
+      ip.startsWith('fc') || // unique local
+      ip.startsWith('fd') || // unique local
+      ip.startsWith('fe80:') // link-local
+    );
   }
 
   isSubdomainTaken(domain, subdomain) {
