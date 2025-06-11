@@ -10,7 +10,12 @@ class CloudflareAPI {
     this.domainsConfig = yaml.load(fs.readFileSync(path.join(__dirname, '../config/domains.yml'), 'utf8'));
     
     if (!this.apiToken) {
-      throw new Error('CLOUDFLARE_API_TOKEN environment variable is required');
+      throw new Error('CLOUDFLARE_API_TOKEN environment variable is required. Please set it in your environment or GitHub secrets.');
+    }
+
+    // Validate token format
+    if (!this.apiToken.match(/^[A-Za-z0-9_-]{40}$/)) {
+      throw new Error('Invalid Cloudflare API token format. Token should be 40 characters long.');
     }
   }
 
@@ -43,7 +48,8 @@ class CloudflareAPI {
           headers: {
             'Authorization': `Bearer ${this.apiToken}`,
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 15000 // 15 second timeout
         }
       );
 
@@ -53,6 +59,14 @@ class CloudflareAPI {
         throw new Error(`Cloudflare API error: ${JSON.stringify(response.data.errors)}`);
       }
     } catch (error) {
+      if (error.response?.status === 401) {
+        throw new Error(`Cloudflare API authentication failed. Please check if your API token is valid and not expired. Token preview: ${this.apiToken.substring(0, 8)}...${this.apiToken.substring(this.apiToken.length - 4)}`);
+      }
+      
+      if (error.response?.status === 403) {
+        throw new Error(`Cloudflare API permission denied. Your token lacks required permissions for zone ${zoneId}. Please ensure your token has Zone:Read and DNS:Edit permissions.`);
+      }
+
       if (error.response?.status === 400 && error.response?.data?.errors) {
         const cfError = error.response.data.errors[0];
         
@@ -69,7 +83,8 @@ class CloudflareAPI {
                 headers: {
                   'Authorization': `Bearer ${this.apiToken}`,
                   'Content-Type': 'application/json'
-                }
+                },
+                timeout: 15000
               }
             );
 
@@ -83,6 +98,14 @@ class CloudflareAPI {
         }
         
         throw new Error(`Cloudflare API error (${cfError.code}): ${cfError.message}`);
+      }
+      
+      if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error(`Network connection error: Cannot reach Cloudflare API (${error.code}). Check internet connection.`);
+      }
+      
+      if (error.code === 'ETIMEDOUT') {
+        throw new Error(`Request timeout: Cloudflare API did not respond within 15 seconds. This might be a temporary issue.`);
       }
       
       if (error.response) {

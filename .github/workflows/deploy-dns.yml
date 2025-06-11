@@ -30,6 +30,34 @@ jobs:
       with:
         files: requests/**/*.json
 
+    - name: Debug Cloudflare API Token
+      if: steps.changed-files.outputs.any_changed == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔍 Cloudflare API Token Debug:"
+        if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          echo "❌ CLOUDFLARE_API_TOKEN is not set in repository secrets"
+          echo ""
+          echo "🔧 To fix this issue:"
+          echo "   1. Generate a token at https://dash.cloudflare.com/profile/api-tokens"
+          echo "   2. Use 'Custom token' with Zone:Read and DNS:Edit permissions"
+          echo "   3. Add it as CLOUDFLARE_API_TOKEN secret in repository settings"
+          echo "   4. Go to: Settings → Secrets and variables → Actions → New repository secret"
+          exit 1
+        else
+          echo "✅ CLOUDFLARE_API_TOKEN is set"
+          echo "📋 Token length: ${#CLOUDFLARE_API_TOKEN} characters"
+          echo "📋 Token preview: ${CLOUDFLARE_API_TOKEN:0:8}***${CLOUDFLARE_API_TOKEN: -4}"
+          
+          # Basic format validation
+          if [[ ! "$CLOUDFLARE_API_TOKEN" =~ ^[A-Za-z0-9_-]{40}$ ]]; then
+            echo "⚠️  Warning: Token format seems incorrect (should be 40 characters)"
+          else
+            echo "✅ Token format looks correct"
+          fi
+        fi
+
     - name: Validate Cloudflare API Token
       if: steps.changed-files.outputs.any_changed == 'true'
       env:
@@ -37,14 +65,25 @@ jobs:
       run: |
         echo "🔐 Validating Cloudflare API token..."
         if ! node scripts/validate-cloudflare-token.js; then
+          echo ""
           echo "❌ Cloudflare API token validation failed"
-          echo "Please check:"
-          echo "  1. Token is correctly set in repository secrets"
-          echo "  2. Token has necessary permissions (Zone:Edit, DNS:Edit)"
-          echo "  3. Token is not expired"
+          echo ""
+          echo "🔧 Troubleshooting steps:"
+          echo "   1. Check if token exists in repository secrets:"
+          echo "      Settings → Secrets and variables → Actions"
+          echo "   2. Verify token permissions at:"
+          echo "      https://dash.cloudflare.com/profile/api-tokens"
+          echo "   3. Required permissions: Zone:Read, DNS:Edit"
+          echo "   4. Check if token is expired or revoked"
+          echo "   5. Test token manually: curl -H 'Authorization: Bearer YOUR_TOKEN' https://api.cloudflare.com/client/v4/user/tokens/verify"
+          echo ""
+          echo "🆘 If issue persists:"
+          echo "   - Delete and recreate the API token"
+          echo "   - Update the repository secret with new token"
+          echo "   - Ensure token has access to zone: $(cat config/domains.yml | grep cloudflare_zone_id | head -1 | cut -d'"' -f2)"
           exit 1
         fi
-        echo "✅ Cloudflare API token is valid"
+        echo "✅ Cloudflare API token is valid and has required permissions"
     
     - name: Debug environment
       if: steps.changed-files.outputs.any_changed == 'true'
