@@ -29,6 +29,22 @@ jobs:
       uses: tj-actions/changed-files@v40
       with:
         files: requests/**/*.json
+
+    - name: Validate Cloudflare API Token
+      if: steps.changed-files.outputs.any_changed == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔐 Validating Cloudflare API token..."
+        if ! node scripts/validate-cloudflare-token.js; then
+          echo "❌ Cloudflare API token validation failed"
+          echo "Please check:"
+          echo "  1. Token is correctly set in repository secrets"
+          echo "  2. Token has necessary permissions (Zone:Edit, DNS:Edit)"
+          echo "  3. Token is not expired"
+          exit 1
+        fi
+        echo "✅ Cloudflare API token is valid"
     
     - name: Debug environment
       if: steps.changed-files.outputs.any_changed == 'true'
