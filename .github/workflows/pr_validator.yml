@@ -1,0 +1,56 @@
+name: PR Validator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'requests/**.json'
+
+jobs:
+  validate-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema requests # Add other dependencies if your script needs them
+
+      - name: Validate JSON and Subdomain Request
+        id: validation
+        run: python .github/scripts/validator.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+
+      - name: Comment on PR with validation result
+        if: always() # Always run this step to report success or failure
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `${{ steps.validation.outputs.validation_output }}`;
+            const prNumber = context.issue.number;
+            const commentBody = `### Subdomain Request Validation
+
+            ${output}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
+            if ('${{ steps.validation.outputs.validation_status }}' === 'failure') {
+              core.setFailed('Validation failed. See PR comment for details.');
+            }

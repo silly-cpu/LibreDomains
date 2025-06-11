@@ -1,0 +1,5 @@
+{
+  "cloudflareApiTokenEnv": "CLOUDFLARE_API_TOKEN",
+  "adminGitHubUsernames": ["your_github_username"],
+  "notificationEmail": "admin@example.com"
+}

@@ -1,0 +1,16 @@
+{
+  "domains": [
+    {
+      "name": "ciao.su",
+      "description": "General purpose domain.",
+      "enabled": true,
+      "zoneId": "YOUR_CLOUDFLARE_ZONE_ID_FOR_CIAO_SU"
+    },
+    {
+      "name": "ciallo.de",
+      "description": "German-focused domain (currently disabled).",
+      "enabled": false,
+      "zoneId": "YOUR_CLOUDFLARE_ZONE_ID_FOR_CIALLO_DE"
+    }
+  ]
+}
