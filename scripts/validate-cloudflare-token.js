@@ -36,13 +36,41 @@ class CloudflareTokenValidator {
 
       if (response.data.success) {
         const result = response.data.result;
+        
+        // Check required permissions
+        const requiredPermissions = [
+          'zone:read',
+          'dns_records:edit'
+        ];
+        
+        const tokenPermissions = result.policies?.map(p => 
+          p.permission_groups?.map(pg => pg.id || pg.name)
+        ).flat().filter(Boolean) || [];
+        
+        const missingPermissions = requiredPermissions.filter(perm => 
+          !tokenPermissions.some(tp => tp.toLowerCase().includes(perm.split(':')[0]) && 
+                                       tp.toLowerCase().includes(perm.split(':')[1]))
+        );
+        
+        if (missingPermissions.length > 0) {
+          return {
+            valid: false,
+            error: 'Token lacks required permissions',
+            missingPermissions,
+            currentPermissions: tokenPermissions,
+            suggestion: `Token is missing required permissions: ${missingPermissions.join(', ')}. Please ensure your token has:\n  • Zone:Zone:Read (to access zone information)\n  • Zone:DNS:Edit (to create, update, and delete DNS records)\n  • Include all zones you want to manage in the token scope`
+          };
+        }
+        
         return {
           valid: true,
           tokenInfo: {
             id: result.id,
             status: result.status,
-            permissions: result.policies?.map(p => p.permission_groups).flat() || [],
-            expires_on: result.expires_on || 'Never'
+            permissions: tokenPermissions,
+            expires_on: result.expires_on || 'Never',
+            requiredPermissions: requiredPermissions,
+            hasAllPermissions: missingPermissions.length === 0
           }
         };
       } else {
@@ -62,13 +90,13 @@ class CloudflareTokenValidator {
           return {
             valid: false,
             error: 'Invalid Cloudflare API token (401 Unauthorized)',
-            suggestion: 'Token is invalid, expired, or revoked. Please:\n  1. Generate a new token at https://dash.cloudflare.com/profile/api-tokens\n  2. Ensure token has Zone:Read and DNS:Edit permissions\n  3. Update the CLOUDFLARE_API_TOKEN secret in GitHub'
+            suggestion: 'Token is invalid, expired, or revoked. Please:\n  1. Generate a new token at https://dash.cloudflare.com/profile/api-tokens\n  2. Create "Custom token" with required permissions:\n     • Zone:Zone:Read (to access zone information)\n     • Zone:DNS:Edit (to manage DNS records)\n  3. Include all zones you want to manage in "Zone Resources"\n  4. Update the CLOUDFLARE_API_TOKEN secret in GitHub'
           };
         } else if (status === 403) {
           return {
             valid: false,
             error: 'Insufficient permissions for Cloudflare API token (403 Forbidden)',
-            suggestion: 'Token lacks required permissions. Please:\n  1. Edit token at https://dash.cloudflare.com/profile/api-tokens\n  2. Add Zone:Read and DNS:Edit permissions\n  3. Include all zones you want to manage'
+            suggestion: 'Token lacks required permissions. Please:\n  1. Edit token at https://dash.cloudflare.com/profile/api-tokens\n  2. Ensure these permissions are granted:\n     • Zone:Zone:Read (to access zone information)\n     • Zone:DNS:Edit (to create, update, delete DNS records)\n  3. Verify "Zone Resources" includes all zones you want to manage:\n     • Include:All zones (recommended)\n     • Or Include:Specific zone for each domain\n  4. Save token changes'
           };
         } else if (status === 429) {
           return {
@@ -151,12 +179,20 @@ if (require.main === module) {
     console.error('❌ Usage: node validate-cloudflare-token.js [token] [zone_name]');
     console.error('   Or set CLOUDFLARE_API_TOKEN environment variable');
     console.error('');
-    console.error('🔧 To get a Cloudflare API token:');
+    console.error('🔧 Required Cloudflare API Token Permissions:');
+    console.error('   • Zone:Zone:Read - Access zone information');
+    console.error('   • Zone:DNS:Edit - Create, update, delete DNS records');
+    console.error('');
+    console.error('📝 To create the token:');
     console.error('   1. Go to https://dash.cloudflare.com/profile/api-tokens');
     console.error('   2. Click "Create Token"');
     console.error('   3. Use "Custom token" template');
-    console.error('   4. Add permissions: Zone:Read, DNS:Edit');
-    console.error('   5. Include specific zones or all zones');
+    console.error('   4. Add permissions:');
+    console.error('      - Zone:Zone:Read');
+    console.error('      - Zone:DNS:Edit');
+    console.error('   5. Zone Resources: Include All zones (or specific zones)');
+    console.error('   6. IP Address Filtering: Optional (for security)');
+    console.error('   7. TTL: Optional (token expiration)');
     process.exit(1);
   }
 

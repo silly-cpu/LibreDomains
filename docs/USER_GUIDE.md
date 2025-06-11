@@ -108,7 +108,23 @@ Set `"proxied": true` to enable Cloudflare's proxy features:
 - Caching
 - Bot mitigation
 
-⚠️ **Note**: Only HTTP/HTTPS traffic can be proxied. Don't enable proxy for mail servers or other services.
+⚠️ **Important Proxy Limitations**:
+- Only HTTP (port 80) and HTTPS (port 443) traffic can be proxied
+- **DO NOT** enable proxy for:
+  - Mail servers (MX records)
+  - FTP servers
+  - SSH servers
+  - Game servers
+  - Any non-HTTP services
+- Records pointing to private IP addresses (RFC 1918) cannot be proxied
+- If you try to proxy a private IP, the system will automatically disable proxy
+
+💡 **When to use proxy**:
+- ✅ Web applications and websites
+- ✅ APIs serving HTTP/HTTPS
+- ✅ Public-facing web services
+- ❌ Backend services on private networks
+- ❌ Email or other protocol servers
 
 ### Step 4: Submit Pull Request
 

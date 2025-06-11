@@ -12,16 +12,53 @@ This guide covers how to manage and maintain the LibreDomains service.
    - Note down the Zone IDs
 
 2. **Generate API Token**
-   - Go to Cloudflare Dashboard → My Profile → API Tokens
-   - Create token with permissions:
-     - Zone:Zone:Read
-     - Zone:DNS:Edit
-   - Copy the token for GitHub Secrets
+   Go to [Cloudflare Dashboard → My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+   
+   **Required Permissions:**
+   - `Zone:Zone:Read` - Access zone information and list zones
+   - `Zone:DNS:Edit` - Create, update, and delete DNS records
+   
+   **Token Configuration Steps:**
+   1. Click "Create Token"
+   2. Select "Custom token" template
+   3. Add permissions:
+      - **Zone** | **Zone** | **Read**
+      - **Zone** | **DNS** | **Edit**
+   4. Zone Resources:
+      - **Include** | **All zones** (recommended)
+      - Or **Include** | **Specific zone** for each domain you manage
+   5. Optional security settings:
+      - Client IP Address Filtering (add your server IPs)
+      - TTL (token expiration date)
+   6. Click "Continue to summary" → "Create Token"
+   7. Copy the token immediately (it won't be shown again)
 
-3. **Configure Domains**
-   - Edit `config/domains.yml`
-   - Add your domain configurations
-   - Set correct Zone IDs
+   **⚠️ Security Notes:**
+   - Store the token securely in GitHub Secrets
+   - Never commit the token to your repository
+   - Consider setting an expiration date
+   - Monitor token usage in Cloudflare dashboard
+
+3. **Validate Token**
+   Test your token before using it:
+   ```bash
+   node scripts/validate-cloudflare-token.js YOUR_TOKEN
+   ```
+   
+   Expected output for valid token:
+   ```
+   ✅ Token is valid
+   📊 Token info: {
+     id: 'abc123...',
+     status: 'active',
+     permissions: ['zone:read', 'dns_records:edit'],
+     expires_on: 'Never',
+     hasAllPermissions: true
+   }
+   ```
+
+4. **Configure Domains**
+   Edit `config/domains.yml` with your domain configurations and Zone IDs
 
 ### 2. GitHub Repository Setup
 
