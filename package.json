@@ -1,0 +1,36 @@
+{
+  "name": "libredomains-beta",
+  "version": "1.0.0",
+  "description": "Free subdomain distribution service powered by GitHub and Cloudflare",
+  "main": "index.js",
+  "scripts": {
+    "validate": "node scripts/validate-request.js",
+    "deploy": "node scripts/deploy-dns.js",
+    "check-user": "node scripts/check-github-user.js",
+    "test": "npm run validate requests/example-personal-website.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/LibreDomains-beta.git"
+  },
+  "keywords": [
+    "dns",
+    "subdomain",
+    "cloudflare",
+    "github",
+    "free",
+    "domain"
+  ],
+  "author": "LibreDomains Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-username/LibreDomains-beta/issues"
+  },
+  "homepage": "https://github.com/your-username/LibreDomains-beta#readme",
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "axios": "^1.6.0",
+    "js-yaml": "^4.1.0"
+  }
+}

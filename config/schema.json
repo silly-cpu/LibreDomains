@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Subdomain Request",
+  "type": "object",
+  "required": ["domain", "subdomain", "owner", "record", "description"],
+  "properties": {
+    "domain": {
+      "type": "string",
+      "enum": ["ciao.su", "ciallo.de"],
+      "description": "The domain to register subdomain under"
+    },
+    "subdomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63,
+      "description": "The subdomain name"
+    },
+    "owner": {
+      "type": "object",
+      "required": ["username", "email"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          "description": "GitHub username"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Owner's email address"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["A", "AAAA", "CNAME", "MX", "TXT", "SRV"]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ttl": {
+          "type": "integer",
+          "minimum": 120,
+          "maximum": 86400,
+          "default": 3600
+        },
+        "proxied": {
+          "type": "boolean",
+          "default": false
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Required for MX records"
+        }
+      },
+      "if": {
+        "properties": { "type": { "const": "MX" } }
+      },
+      "then": {
+        "required": ["priority"]
+      }
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Brief description of subdomain usage"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "mail",
+  "owner": {
+    "username": "company",
+    "email": "admin@company.com"
+  },
+  "record": {
+    "type": "MX",
+    "value": "mail.example.com",
+    "priority": 10,
+    "ttl": 3600,
+    "proxied": false
+  },
+  "description": "Company mail server for internal communications"
+}

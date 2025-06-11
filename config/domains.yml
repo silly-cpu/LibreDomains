@@ -1,0 +1,38 @@
+domains:
+  ciao.su:
+    enabled: true
+    cloudflare_zone_id: "your_zone_id_here"
+    description: "Free subdomain service"
+    restrictions:
+      - "No adult content"
+      - "No illegal activities"
+      - "No spam or phishing"
+    allowed_record_types:
+      - "A"
+      - "AAAA"
+      - "CNAME"
+      - "MX"
+      - "TXT"
+      - "SRV"
+    max_records_per_subdomain: 5
+    
+  ciallo.de:
+    enabled: false
+    cloudflare_zone_id: "your_zone_id_here"
+    description: "Coming soon"
+    restrictions:
+      - "Currently not accepting applications"
+    allowed_record_types:
+      - "A"
+      - "AAAA"
+      - "CNAME"
+      - "MX"
+      - "TXT"
+      - "SRV"
+    max_records_per_subdomain: 5
+
+settings:
+  auto_approve: false
+  require_github_verification: true
+  min_account_age_days: 30
+  max_subdomains_per_user: 3

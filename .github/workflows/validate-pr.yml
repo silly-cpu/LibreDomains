@@ -1,0 +1,69 @@
+name: Validate Pull Request
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths: [ 'requests/**/*.json' ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v40
+      with:
+        files: requests/**/*.json
+    
+    - name: Validate requests
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        echo "Validating changed request files..."
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          echo "Validating $file"
+          node scripts/validate-request.js "$file"
+        done
+    
+    - name: Check GitHub user
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        echo "Checking GitHub user requirements..."
+        node scripts/check-github-user.js "${{ github.event.pull_request.user.login }}"
+    
+    - name: Comment on PR
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ Your request validation failed. Please check the logs above and fix the issues.'
+          })
+    
+    - name: Comment success on PR
+      if: success()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ Your request has been validated successfully! It will be reviewed by maintainers.'
+          })

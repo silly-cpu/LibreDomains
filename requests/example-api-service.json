@@ -1,0 +1,15 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "api",
+  "owner": {
+    "username": "developer123",
+    "email": "dev@startup.com"
+  },
+  "record": {
+    "type": "A",
+    "value": "198.51.100.1",
+    "ttl": 3600,
+    "proxied": true
+  },
+  "description": "REST API service for mobile application"
+}

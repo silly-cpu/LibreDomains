@@ -1,0 +1,15 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "ipv6test",
+  "owner": {
+    "username": "networkdev",
+    "email": "network@example.com"
+  },
+  "record": {
+    "type": "AAAA",
+    "value": "2001:db8::1",
+    "ttl": 3600,
+    "proxied": false
+  },
+  "description": "IPv6 testing website for network development"
+}

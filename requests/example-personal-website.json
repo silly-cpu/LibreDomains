@@ -1,0 +1,15 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "john",
+  "owner": {
+    "username": "johnsmith",
+    "email": "john.smith@example.com"
+  },
+  "record": {
+    "type": "CNAME",
+    "value": "johnsmith.github.io",
+    "ttl": 3600,
+    "proxied": true
+  },
+  "description": "Personal website and portfolio showcase"
+}
