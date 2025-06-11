@@ -1,0 +1,25 @@
+{
+  "domains": [
+    {
+      "name": "ciao.su",
+      "enabled": true,
+      "description": "主要域名",
+      "cloudflare_zone_id": ""
+    },
+    {
+      "name": "test.com", 
+      "enabled": false,
+      "description": "测试域名",
+      "cloudflare_zone_id": ""
+    }
+  ],
+  "admin": {
+    "email": "admin@example.com",
+    "github_username": "admin"
+  },
+  "settings": {
+    "auto_approve": false,
+    "max_subdomains_per_user": 5,
+    "allowed_record_types": ["A", "AAAA", "CNAME", "TXT"]
+  }
+}

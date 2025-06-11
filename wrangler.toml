@@ -1,0 +1,14 @@
+# Cloudflare Pages 部署配置
+# 在项目根目录下的 wrangler.toml 文件
+
+name = "libredomains"
+compatibility_date = "2023-12-01"
+
+[build]
+command = "npm run build"
+cwd = "."
+watch_dir = "."
+
+[[build.environment_variables]]
+name = "NODE_ENV"
+value = "production"
