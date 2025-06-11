@@ -1,9 +1,0 @@
-{
-  "domain": "test.ciao.su",
-  "type": "A",
-  "content": "192.0.2.1",
-  "ttl": 300,
-  "proxied": false,
-  "approved": true,
-  "created_at": "2025-01-01T00:00:00.000Z"
-}
