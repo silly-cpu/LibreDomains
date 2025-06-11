@@ -33,6 +33,6 @@ domains:
 
 settings:
   auto_approve: false
-  require_github_verification: true
+  require_github_verification: false
   min_account_age_days: 30
   max_subdomains_per_user: 3

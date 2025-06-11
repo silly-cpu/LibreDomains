@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'your-username'
+    if: github.repository_owner == 'bestZwei'
     
     steps:
     - uses: actions/checkout@v4
