@@ -3,8 +3,8 @@
   "subdomain": "1good",
   "owner": {
     "username": "tsengvee",
-    "email": "tsengvee@example.com"
-  },
+    "email": "tsengvee@nb.com"
+  }, 
   "record": {
     "type": "A",
     "value": "192.168.1.1",
