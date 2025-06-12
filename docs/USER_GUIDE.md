@@ -1,28 +1,28 @@
-# LibreDomains User Guide
+# LibreDomains 用户指南
 
-This guide will help you request and manage your free subdomains.
+本指南将帮助您申请和管理免费子域名。
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Step 1: Fork the Repository
+### 第一步：Fork 仓库
 
-1. Go to [LibreDomains-beta](https://github.com/bestZwei/LibreDomains-beta)
-2. Click the **Fork** button in the top right
-3. Clone your fork locally
+1. 访问 [LibreDomains-beta](https://github.com/bestZwei/LibreDomains-beta)
+2. 点击右上角的 **Fork** 按钮
+3. 将您的 fork 克隆到本地
 
-### Step 2: Create Your Request
+### 第二步：创建申请请求
 
-1. Create a new file in the `requests/` directory
-2. Name it `your-subdomain-name.json`
-3. Use the template below
+1. 在 `requests/` 目录中创建新文件
+2. 命名为 `your-subdomain-name.json`
+3. 使用下面的模板
 
-### Step 3: Submit Pull Request
+### 第三步：提交 Pull Request
 
-1. Commit your request file
-2. Push to your fork
-3. Create a Pull Request to the main repository
+1. 提交您的请求文件
+2. 推送到您的 fork
+3. 向主仓库创建 Pull Request
 
-## 📝 Request Template
+## 📝 请求模板
 
 ```json
 {
@@ -38,23 +38,22 @@ This guide will help you request and manage your free subdomains.
     "ttl": 3600,
     "proxied": false
   },
-  "description": "Brief description of your subdomain usage"
+  "description": "我的网站的简短描述"
 }
 ```
 
-## 🎯 Record Types
+## 🎯 记录类型
 
-### A Record (IPv4)
+### A 记录 (IPv4)
 ```json
 "record": {
   "type": "A",
-  "value": "203.0.113.10",
-  "ttl": 3600,
+  "value": "203.0.113.10",  "ttl": 3600,
   "proxied": true
 }
 ```
 
-### AAAA Record (IPv6)
+### AAAA 记录 (IPv6)
 ```json
 "record": {
   "type": "AAAA",
@@ -64,7 +63,7 @@ This guide will help you request and manage your free subdomains.
 }
 ```
 
-### CNAME Record
+### CNAME 记录
 ```json
 "record": {
   "type": "CNAME",
@@ -74,7 +73,7 @@ This guide will help you request and manage your free subdomains.
 }
 ```
 
-### MX Record
+### MX 记录
 ```json
 "record": {
   "type": "MX",
@@ -85,7 +84,7 @@ This guide will help you request and manage your free subdomains.
 }
 ```
 
-### TXT Record
+### TXT 记录
 ```json
 "record": {
   "type": "TXT",
@@ -95,33 +94,33 @@ This guide will help you request and manage your free subdomains.
 }
 ```
 
-## 🛡️ Rules and Requirements
+## 🛡️ 规则和要求
 
-### GitHub Account Requirements
-- Account must be at least **30 days old**
-- Must have a verified email address
-- Maximum **3 subdomains** per user
+### GitHub 账户要求
+- 账户年龄至少 **30 天**
+- 必须有已验证的邮箱地址
+- 每个用户最多 **3 个子域名**
 
-### Subdomain Requirements
-- 1-63 characters long
-- Only letters, numbers, and hyphens
-- Cannot start or end with hyphen
-- Must be unique across the domain
+### 子域名要求
+- 长度 1-63 字符
+- 只能包含字母、数字和连字符
+- 不能以连字符开始或结束
+- 在域名下必须唯一
 
-### Content Policy
-- ✅ Personal websites and portfolios
-- ✅ Open source projects
-- ✅ Educational content
-- ✅ Non-commercial APIs
-- ❌ Adult content
-- ❌ Illegal activities
-- ❌ Spam or phishing
-- ❌ Commercial services
+### 内容政策
+- ✅ 个人网站和作品集
+- ✅ 开源项目
+- ✅ 教育内容
+- ✅ 非商业 API
+- ❌ 成人内容
+- ❌ 违法活动
+- ❌ 垃圾邮件或钓鱼
+- ❌ 商业服务
 
-## 🔧 Common Use Cases
+## 🔧 常见用例
 
-### GitHub Pages Website
-Perfect for personal portfolios and project documentation.
+### GitHub Pages 网站
+适用于个人作品集和项目文档。
 
 ```json
 {
@@ -137,12 +136,12 @@ Perfect for personal portfolios and project documentation.
     "ttl": 3600,
     "proxied": false
   },
-  "description": "Personal portfolio website showcasing my development projects"
+  "description": "展示我的开发项目的个人作品集网站"
 }
 ```
 
-### API Endpoint
-For hosting APIs and web services.
+### API 端点
+用于托管 API 和 Web 服务。
 
 ```json
 {
@@ -158,72 +157,72 @@ For hosting APIs and web services.
     "ttl": 3600,
     "proxied": true
   },
-  "description": "REST API for my mobile application with user management"
+  "description": "我的移动应用的 REST API，包含用户管理功能"
 }
 ```
 
-## ⚡ Tips and Best Practices
+## ⚡ 提示和最佳实践
 
-### Choosing Record Types
-- **A/AAAA**: When you have a direct IP address
-- **CNAME**: When pointing to another domain (like GitHub Pages)
-- **MX**: For email services
-- **TXT**: For verification and configuration
+### 选择记录类型
+- **A/AAAA**: 当您有直接的 IP 地址时
+- **CNAME**: 当指向另一个域名时（如 GitHub Pages）
+- **MX**: 用于邮件服务
+- **TXT**: 用于验证和配置
 
-### TTL Settings
-- **300-600**: For testing or frequently changing records
-- **3600** (default): Good balance for most use cases
-- **7200-86400**: For stable, rarely changing records
+### TTL 设置
+- **300-600**: 用于测试或频繁更改的记录
+- **3600**（默认）: 大多数用例的良好平衡
+- **7200-86400**: 用于稳定、很少更改的记录
 
-### Cloudflare Proxy
-- **Enable** (`proxied: true`) for:
-  - DDoS protection
-  - Better performance (CDN)
-  - SSL termination
-- **Disable** (`proxied: false`) for:
-  - Private IP addresses
-  - Non-web services
-  - Direct DNS resolution needed
+### Cloudflare 代理
+- **启用** (`proxied: true`) 适用于:
+  - DDoS 保护
+  - 更好的性能（CDN）
+  - SSL 终端
+- **禁用** (`proxied: false`) 适用于:
+  - 私有 IP 地址
+  - 非 Web 服务
+  - 需要直接 DNS 解析
 
-## 🚨 Troubleshooting
+## 🚨 故障排除
 
-### Request Rejected
-- Check if subdomain is already taken
-- Verify your GitHub account meets requirements
-- Ensure request follows the schema
+### 请求被拒绝
+- 检查子域名是否已被占用
+- 验证您的 GitHub 账户是否符合要求
+- 确保请求遵循模式规范
 
-### DNS Not Resolving
-- Wait 24-48 hours for global DNS propagation
-- Check if you're using the correct record type
-- Verify your target server is accessible
+### DNS 不解析
+- 等待 24-48 小时全球 DNS 传播
+- 检查是否使用了正确的记录类型
+- 验证您的目标服务器是否可访问
 
-### Record Update Needed
-- Create a new request file with updated information
-- The system will automatically update existing records
+### 需要更新记录
+- 创建包含更新信息的新请求文件
+- 系统将自动更新现有记录
 
-## 📞 Getting Help
+## 📞 获取帮助
 
-- **Issues**: Report bugs or problems
-- **Discussions**: Ask questions and get community help
-- **Email**: Contact maintainers for urgent issues
+- **Issues**: 报告错误或问题
+- **Discussions**: 提问并获得社区帮助
+- **邮件**: 联系维护者处理紧急问题
 
-## 🔄 Updating Your Records
+## 🔄 更新您的记录
 
-To update an existing subdomain:
+要更新现有子域名：
 
-1. Modify your original request file
-2. Update the values you want to change
-3. Submit a new Pull Request
-4. The system will automatically update the DNS record
+1. 修改您的原始请求文件
+2. 更新您想要更改的值
+3. 提交新的 Pull Request
+4. 系统将自动更新 DNS 记录
 
-## 🗑️ Removing Your Subdomain
+## 🗑️ 删除您的子域名
 
-To remove your subdomain:
+要删除您的子域名：
 
-1. Delete your request file from the `requests/` directory
-2. Submit a Pull Request
-3. The DNS record will be automatically removed
+1. 从 `requests/` 目录删除您的请求文件
+2. 提交 Pull Request
+3. DNS 记录将自动删除
 
 ---
 
-**Need more help?** Check our [FAQ](FAQ.md) or [create an issue](https://github.com/bestZwei/LibreDomains-beta/issues/new).
+**需要更多帮助？** 查看我们的 [FAQ](FAQ.md) 或 [创建 issue](https://github.com/bestZwei/LibreDomains-beta/issues/new)。

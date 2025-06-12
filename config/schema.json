@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Subdomain Request Schema",
+  "type": "object",
+  "required": ["domain", "subdomain", "owner", "record", "description"],
+  "properties": {
+    "domain": {
+      "type": "string",
+      "enum": ["ciao.su", "ciallo.de"],
+      "description": "要申请子域名的主域名"
+    },
+    "subdomain": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+      "minLength": 1,
+      "maxLength": 63,
+      "description": "子域名名称（1-63个字符，只能包含字母、数字和连字符，不能以连字符开始或结束）"
+    },
+    "owner": {
+      "type": "object",
+      "required": ["username", "email"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+          "description": "GitHub 用户名"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "邮箱地址"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["A", "AAAA", "CNAME", "MX", "TXT", "SRV"],
+          "description": "DNS 记录类型"
+        },
+        "value": {
+          "type": "string",
+          "description": "DNS 记录值"
+        },
+        "ttl": {
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 86400,
+          "default": 3600,
+          "description": "TTL（生存时间），单位秒"
+        },
+        "proxied": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否启用 Cloudflare 代理"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "MX 记录的优先级（仅 MX 记录需要）"
+        }
+      },
+      "if": {
+        "properties": { "type": { "const": "MX" } }
+      },
+      "then": {
+        "required": ["priority"]
+      }
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "子域名用途描述（10-500个字符）"
+    }
+  }
+}

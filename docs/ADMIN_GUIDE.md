@@ -1,22 +1,44 @@
-# Administrator Guide
+# LibreDomains 管理员指南
 
-This guide covers how to manage and maintain the LibreDomains service.
+本指南面向项目维护者和管理员，介绍如何管理和维护 LibreDomains 服务。
 
-## 🔧 Initial Setup
+## 🔧 系统架构
 
-### 1. Cloudflare Configuration
+### 组件概览
+- **GitHub Repository**: 存储配置和请求
+- **GitHub Actions**: 自动化验证和部署
+- **Cloudflare API**: DNS 记录管理
+- **Python Scripts**: 核心业务逻辑
 
-1. **Create Cloudflare Account**
-   - Sign up at [cloudflare.com](https://cloudflare.com)
-   - Add your domains to Cloudflare
-   - Note down the Zone IDs
+### 目录结构
+```
+LibreDomains-beta/
+├── .github/workflows/     # GitHub Actions 工作流
+├── config/               # 配置文件
+│   ├── domains.yml       # 域名配置
+│   └── schema.json       # 请求格式模式
+├── docs/                 # 文档
+├── domains/              # 已部署的记录
+│   ├── ciao.su/
+│   └── ciallo.de/
+├── requests/             # 用户请求文件
+├── scripts/              # Python 脚本
+└── tests/                # 测试文件
+```
 
-2. **Generate API Token**
-   Go to [Cloudflare Dashboard → My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens)
-   
-   **Required Permissions:**
-   - `Zone:Zone:Read` - Access zone information and list zones
-   - `Zone:DNS:Edit` - Create, update, and delete DNS records
+## ⚙️ 环境配置
+
+### GitHub Secrets
+在仓库设置中配置以下 Secrets：
+
+```bash
+CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+```
+
+### Cloudflare API Token
+需要以下权限：
+- Zone:Zone:Read
+- Zone:DNS:Edit
    
    **Token Configuration Steps:**
    1. Click "Create Token"

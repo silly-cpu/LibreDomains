@@ -1,44 +1,44 @@
 # LibreDomains Beta
 
-Free subdomain distribution service powered by GitHub and Cloudflare.
+基于 GitHub 和 Cloudflare 的免费二级域名分发服务。
 
-## 🌟 Features
+## 🌟 功能特性
 
-- **Free subdomains** for multiple domains
-- **Automated validation** and deployment
-- **Cloudflare integration** with proxy support
-- **Multiple DNS record types** (A, AAAA, CNAME, MX, TXT, SRV)
-- **GitHub-based management** - no servers needed
-- **Anti-abuse protection** with user verification
+- **免费二级域名** 支持多个主域名
+- **自动验证和部署** 全程自动化流程
+- **Cloudflare 集成** 支持代理和各种 DNS 记录类型
+- **多种 DNS 记录类型** (A, AAAA, CNAME, MX, TXT, SRV)
+- **基于 GitHub 管理** 无需服务器，全程在 GitHub 完成
+- **防滥用保护** 包含用户验证和限制机制
 
-## 📋 Available Domains
+## 📋 可用域名
 
-| Domain | Status | Description |
+| 域名 | 状态 | 描述 |
 |--------|--------|-------------|
-| `ciao.su` | ✅ Available | Free subdomain service |
-| `ciallo.de` | ❌ Coming Soon | Currently not accepting applications |
+| `ciao.su` | ✅ 开放申请 | 免费二级域名服务 |
+| `ciallo.de` | ❌ 即将开放 | 目前不接受申请 |
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### For Users
+### 用户申请流程
 
-1. **Fork this repository**
-2. **Create your request file** in `requests/` directory
-3. **Submit a Pull Request**
-4. **Wait for approval** and automatic deployment
+1. **Fork 此仓库**
+2. **在 `requests/` 目录创建请求文件**
+3. **提交 Pull Request**
+4. **等待审核** 和自动部署
 
-### Example Requests
+### 申请示例
 
-Check out these example request files in the `requests/` directory:
+查看 `requests/` 目录中的示例请求文件：
 
-- **Personal Website**: [`example-personal-website.json`](requests/example-personal-website.json) - GitHub Pages site using CNAME
-- **API Service**: [`example-api-service.json`](requests/example-api-service.json) - REST API using A record
-- **Mail Server**: [`example-mail-server.json`](requests/example-mail-server.json) - Email server using MX record
-- **IPv6 Website**: [`example-ipv6-website.json`](requests/example-ipv6-website.json) - IPv6 site using AAAA record
+- **个人网站**: [`example-personal-website.json`](requests/example-personal-website.json) - 使用 CNAME 指向 GitHub Pages
+- **API 服务**: [`example-api-service.json`](requests/example-api-service.json) - 使用 A 记录指向服务器
+- **邮件服务器**: [`example-mail-server.json`](requests/example-mail-server.json) - 使用 MX 记录配置邮件
+- **IPv6 网站**: [`example-ipv6-website.json`](requests/example-ipv6-website.json) - 使用 AAAA 记录支持 IPv6
 
-### Basic Request Template
+### 基本请求模板
 
-Create a file `requests/your-subdomain.json`:
+在 `requests/` 目录创建文件 `your-subdomain.json`：
 
 ```json
 {
@@ -54,72 +54,75 @@ Create a file `requests/your-subdomain.json`:
     "ttl": 3600,
     "proxied": false
   },
-  "description": "My personal website"
+  "description": "我的个人网站"
 }
 ```
 
-### Supported Record Types
+### 支持的记录类型
 
-- **A**: IPv4 address
-- **AAAA**: IPv6 address  
-- **CNAME**: Canonical name
-- **MX**: Mail exchange (requires priority)
-- **TXT**: Text record
-- **SRV**: Service record
+- **A**: IPv4 地址
+- **AAAA**: IPv6 地址  
+- **CNAME**: 别名记录
+- **MX**: 邮件交换记录（需要优先级）
+- **TXT**: 文本记录
+- **SRV**: 服务记录
 
-## 📖 Documentation
+## 📖 文档
 
-- [User Guide](docs/USER_GUIDE.md) - How to request subdomains
-- [Admin Guide](docs/ADMIN_GUIDE.md) - How to manage the service
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute to the project
+- [用户指南](docs/USER_GUIDE.md) - 如何申请子域名
+- [管理员指南](docs/ADMIN_GUIDE.md) - 如何管理服务
+- [贡献指南](CONTRIBUTING.md) - 如何参与项目
 
-## 🛡️ Rules and Restrictions
+## 🛡️ 规则和限制
 
-- GitHub account must be at least 30 days old
-- Maximum 3 subdomains per user
-- No adult content, illegal activities, or spam
-- Subdomain must be 1-63 characters, alphanumeric and hyphens only
-- Cannot start or end with hyphen
+- GitHub 账户年龄至少 30 天
+- 每个用户最多申请 3 个子域名
+- 禁止成人内容、违法活动或垃圾邮件
+- 子域名长度 1-63 字符，只能包含字母数字和连字符
+- 不能以连字符开始或结束
 
-## 🛠️ Development
+## 🛠️ 开发
 
-### Setup
+### 环境设置
 
 ```bash
 git clone https://github.com/your-username/LibreDomains-beta.git
 cd LibreDomains-beta
-npm install
+pip install -r requirements.txt
 ```
 
-### Scripts
+### 脚本使用
 
 ```bash
-# Validate a request
-npm run validate requests/example-personal-website.json
+# 验证请求文件
+python scripts/validate_request.py requests/example-personal-website.json
 
-# Check GitHub user
-npm run check-user username
+# 检查 GitHub 用户
+python scripts/check_github_user.py username
 
-# Generate statistics
-node scripts/generate-stats.js
+# 生成统计信息
+python scripts/generate_stats.py
+
+# DNS 健康检查
+python scripts/health_check.py
 ```
 
-## 🤝 Contributing
+## 🤝 贡献
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
+欢迎贡献！请查看我们的 [贡献指南](CONTRIBUTING.md)。
 
-Types of contributions:
-- 🐛 Bug reports and fixes
-- ✨ New features
-- 📚 Documentation improvements
-- 🎨 UI/UX improvements
+贡献类型:
+- 🐛 错误报告和修复
+- ✨ 新功能
+- 📚 文档改进
+- 🎨 界面/体验改进
 
-## 📊 Statistics
+## 📊 统计信息
 
-Generate current usage statistics:
+生成当前使用统计：
 
 ```bash
-node scripts/generate-stats.js
+python scripts/generate_stats.py
 ```
 
 ## 📝 License

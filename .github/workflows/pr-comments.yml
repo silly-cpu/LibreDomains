@@ -1,0 +1,317 @@
+name: PR 自动评论和标签
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'requests/**/*.json'
+
+jobs:
+  auto-comment:
+    name: 自动评论和标签
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 获取变更的文件
+      id: changed-files
+      uses: tj-actions/changed-files@v35
+      with:
+        files: requests/**/*.json
+    
+    - name: 验证请求并生成评论
+      id: validation
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        echo "📋 开始验证请求文件..."
+        
+        validation_results=""
+        overall_status="success"
+        error_count=0
+        warning_count=0
+        
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          echo "🔍 验证文件: $file"
+          
+          if python scripts/validate_request.py "$file" --verbose; then
+            validation_results+="✅ \`$file\` - 验证通过\n"
+          else
+            validation_results+="❌ \`$file\` - 验证失败\n"
+            overall_status="failure"
+            error_count=$((error_count + 1))
+          fi
+        done
+        
+        # 生成评论内容
+        comment="## 🤖 自动验证结果\n\n"
+        
+        if [ "$overall_status" = "success" ]; then
+          comment+="### ✅ 验证通过\n\n"
+          comment+="恭喜！您的子域名申请已通过所有自动验证。\n\n"
+        else
+          comment+="### ❌ 验证失败\n\n"
+          comment+="抱歉，您的申请中有 $error_count 个文件验证失败，请修正后重新提交。\n\n"
+        fi
+        
+        comment+="### 📋 验证详情\n\n"
+        comment+="$validation_results\n"
+        
+        comment+="### 📖 常见问题\n\n"
+        comment+="- **JSON 格式错误**: 请检查语法和缺少的字段\n"
+        comment+="- **子域名已被占用**: 选择其他名称\n"
+        comment+="- **GitHub 账户要求**: 账户年龄需满 30 天\n"
+        comment+="- **记录格式错误**: 检查 IP 地址或域名格式\n\n"
+        
+        comment+="### 🔗 有用链接\n\n"
+        comment+="- [用户指南](../blob/main/docs/USER_GUIDE.md)\n"
+        comment+="- [常见问题](../blob/main/docs/FAQ.md)\n"
+        comment+="- [示例请求](../tree/main/requests)\n\n"
+        
+        if [ "$overall_status" = "success" ]; then
+          comment+="**下一步**: 等待管理员审核和合并 🚀"
+        else
+          comment+="**下一步**: 修正问题后推送新的提交 🔧"
+        fi
+        
+        # 保存结果
+        echo "$comment" > comment.md
+        echo "status=$overall_status" >> $GITHUB_OUTPUT
+        echo "error_count=$error_count" >> $GITHUB_OUTPUT
+    
+    - name: 添加 PR 评论
+      if: steps.changed-files.outputs.any_changed == 'true'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const comment = fs.readFileSync('comment.md', 'utf8');
+          
+          // 删除之前的机器人评论
+          const comments = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          for (const comment_item of comments.data) {
+            if (comment_item.user.type === 'Bot' && comment_item.body.includes('🤖 自动验证结果')) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment_item.id,
+              });
+            }
+          }
+          
+          // 添加新评论
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: 添加标签
+      if: steps.changed-files.outputs.any_changed == 'true'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const status = '${{ steps.validation.outputs.status }}';
+          const errorCount = parseInt('${{ steps.validation.outputs.error_count }}');
+          
+          // 移除所有相关标签
+          const labelsToRemove = ['✅ validated', '❌ validation-failed', '⚠️ needs-review', '🔄 pending'];
+          
+          try {
+            const currentLabels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            for (const label of currentLabels.data) {
+              if (labelsToRemove.includes(label.name)) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label.name,
+                });
+              }
+            }
+          } catch (error) {
+            console.log('清理标签时出错:', error.message);
+          }
+          
+          // 添加新标签
+          const newLabels = [];
+          
+          if (status === 'success') {
+            newLabels.push('✅ validated');
+            newLabels.push('⚠️ needs-review');
+          } else {
+            newLabels.push('❌ validation-failed');
+          }
+          
+          // 根据错误数量添加优先级标签
+          if (errorCount > 2) {
+            newLabels.push('priority: high');
+          }
+          
+          if (newLabels.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: newLabels,
+            });
+          }
+
+  welcome-comment:
+    name: 欢迎新贡献者
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    
+    steps:
+    - name: 检查是否为首次贡献者
+      id: check-contributor
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const contributor = context.payload.pull_request.user.login;
+          
+          // 检查是否为首次贡献者
+          const { data: pullRequests } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            creator: contributor,
+            state: 'all'
+          });
+          
+          const isFirstTime = pullRequests.length === 1;
+          
+          return { isFirstTime, contributor };
+    
+    - name: 欢迎新贡献者
+      if: fromJSON(steps.check-contributor.outputs.result).isFirstTime
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const contributor = '${{ fromJSON(steps.check-contributor.outputs.result).contributor }}';
+          
+          const welcomeMessage = `## 🎉 欢迎来到 LibreDomains！
+          
+嗨 @${contributor}，
+
+感谢您提交第一个子域名申请！我们很高兴看到新成员加入我们的社区。
+
+### 📋 接下来会发生什么？
+
+1. **自动验证** 🤖 - 我们的机器人会检查您的请求格式
+2. **人工审核** 👥 - 管理员会审查您的申请
+3. **DNS 部署** 🚀 - 审核通过后自动部署
+4. **全球生效** 🌍 - 24-48小时内全球可访问
+
+### 🔗 有用资源
+
+- [用户指南](../blob/main/docs/USER_GUIDE.md) - 详细的使用说明
+- [常见问题](../blob/main/docs/FAQ.md) - 解答疑惑
+- [示例文件](../tree/main/requests) - 参考其他申请
+
+### 💬 需要帮助？
+
+如果您有任何问题，请随时：
+- 在这个 PR 中评论
+- [创建 Issue](../issues/new) 
+- 查看我们的 [FAQ](../blob/main/docs/FAQ.md)
+
+再次感谢您的贡献！🙏
+
+---
+*此消息由自动化系统发送*`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: welcomeMessage
+          });
+    
+    - name: 添加首次贡献者标签
+      if: fromJSON(steps.check-contributor.outputs.result).isFirstTime
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: ['👋 first-time-contributor']
+          });
+
+  merged-thanks:
+    name: 合并感谢
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    
+    steps:
+    - name: 发送感谢消息
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const contributor = context.payload.pull_request.user.login;
+          
+          const thanksMessage = `## 🎉 申请已批准！
+
+恭喜 @${contributor}！您的子域名申请已成功合并。
+
+### 🚀 部署状态
+
+您的 DNS 记录正在部署中。请注意：
+
+- **立即生效**: 记录已添加到 Cloudflare
+- **全球传播**: 24-48 小时内完全生效
+- **验证方式**: 使用 \`nslookup\` 或在线 DNS 工具检查
+
+### 🔧 管理您的子域名
+
+- **更新记录**: 修改原请求文件并提交新 PR
+- **删除域名**: 删除请求文件并提交 PR
+- **技术支持**: [创建 Issue](../issues/new)
+
+### 📊 项目统计
+
+感谢您成为我们社区的一部分！您是第 N 位获得子域名的用户。
+
+---
+
+**享受您的免费子域名！** 🎊
+
+如果您觉得这个项目有用，请考虑：
+- ⭐ 给项目点个星
+- 📢 分享给朋友
+- 🤝 帮助其他用户
+
+*此消息由自动化系统发送*`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: thanksMessage
+          });

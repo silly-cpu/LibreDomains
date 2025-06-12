@@ -1,24 +1,38 @@
-# Contributing to LibreDomains
+# 贡献指南
 
-Thank you for your interest in contributing to LibreDomains! This document provides guidelines and information for contributors.
+感谢您对 LibreDomains 项目的兴趣！我们欢迎各种形式的贡献。
 
-## 🤝 Ways to Contribute
+## 🚀 贡献方式
 
-### For Users
-- 🐛 **Report Bugs**: Found an issue? Let us know!
-- 💡 **Suggest Features**: Have ideas for improvements?
-- 📚 **Improve Documentation**: Help make our guides clearer
-- 🧪 **Test New Features**: Try beta features and provide feedback
+### 🐛 报告错误
+- 使用 [Issues](../../issues) 报告错误
+- 提供详细的重现步骤
+- 包含相关的日志或截图
 
-### For Developers
-- 🔧 **Fix Bugs**: Help resolve reported issues
-- ✨ **Add Features**: Implement new functionality
-- 🏗️ **Improve Infrastructure**: Enhance CI/CD, automation
-- 🔍 **Code Review**: Review pull requests from other contributors
+### ✨ 建议新功能
+- 在 [Discussions](../../discussions) 中讨论想法
+- 创建 Feature Request Issue
+- 描述功能的用途和场景
 
-## 🚀 Getting Started
+### 📚 改进文档
+- 修正文档中的错误
+- 添加示例和说明
+- 翻译文档到其他语言
 
-### Development Setup
+### 💻 代码贡献
+- 修复 bug
+- 实现新功能
+- 优化性能
+- 添加测试
+
+## 🔧 开发设置
+
+### 环境要求
+- Python 3.8+
+- Git
+- GitHub 账户
+
+### 本地设置
 
 1. **Fork and Clone**
    ```bash

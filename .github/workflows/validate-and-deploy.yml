@@ -1,0 +1,250 @@
+name: 验证和部署子域名请求
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'requests/**/*.json'
+  push:
+    branches: [main]
+    paths:
+      - 'requests/**/*.json'
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  validate:
+    name: 验证请求
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 获取变更的文件
+      id: changed-files
+      uses: tj-actions/changed-files@v35
+      with:
+        files: requests/**/*.json
+    
+    - name: 验证请求文件
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        echo "检测到变更的请求文件:"
+        echo "${{ steps.changed-files.outputs.all_changed_files }}"
+        
+        validation_failed=false
+        
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          echo ""
+          echo "🔍 验证文件: $file"
+          echo "----------------------------------------"
+          
+          if python scripts/validate_request.py "$file"; then
+            echo "✅ $file 验证通过"
+          else
+            echo "❌ $file 验证失败"
+            validation_failed=true
+          fi
+        done
+        
+        if [ "$validation_failed" = true ]; then
+          echo ""
+          echo "❌ 部分文件验证失败，请检查并修正"
+          exit 1
+        else
+          echo ""
+          echo "✅ 所有文件验证通过"
+        fi
+    
+    - name: 检查删除的文件
+      if: steps.changed-files.outputs.any_deleted == 'true'
+      run: |
+        echo "检测到删除的文件:"
+        echo "${{ steps.changed-files.outputs.deleted_files }}"
+        
+        # 将删除的文件列表保存到文件中，供后续作业使用
+        echo "${{ steps.changed-files.outputs.deleted_files }}" > deleted_files.txt
+    
+    - name: 上传删除文件列表
+      if: steps.changed-files.outputs.any_deleted == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: deleted-files
+        path: deleted_files.txt
+
+  deploy:
+    name: 部署 DNS 记录
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 获取变更的文件
+      id: changed-files
+      uses: tj-actions/changed-files@v35
+      with:
+        files: requests/**/*.json
+    
+    - name: 部署新增/修改的记录
+      if: steps.changed-files.outputs.any_changed == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "部署变更的记录:"
+        echo "${{ steps.changed-files.outputs.all_changed_files }}"
+        
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          echo ""
+          echo "🚀 部署记录: $file"
+          echo "----------------------------------------"
+          
+          if python scripts/deploy_dns.py deploy "$file"; then
+            echo "✅ $file 部署成功"
+          else
+            echo "❌ $file 部署失败"
+            exit 1
+          fi
+        done
+    
+    - name: 下载删除文件列表
+      if: steps.changed-files.outputs.any_deleted == 'true'
+      uses: actions/download-artifact@v3
+      with:
+        name: deleted-files
+      continue-on-error: true
+    
+    - name: 删除 DNS 记录
+      if: steps.changed-files.outputs.any_deleted == 'true'
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        if [ -f deleted_files.txt ]; then
+          echo "删除 DNS 记录:"
+          cat deleted_files.txt
+          
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [[ "$file" == requests/*.json ]]; then
+              echo ""
+              echo "🗑️ 删除记录: $file"
+              echo "----------------------------------------"
+              
+              # 创建临时文件来模拟删除的请求文件内容
+              # 这里我们需要从 git 历史中获取文件内容
+              git show HEAD~1:"$file" > temp_deleted_file.json 2>/dev/null || continue
+              
+              if python scripts/deploy_dns.py delete temp_deleted_file.json; then
+                echo "✅ $file 对应的 DNS 记录删除成功"
+              else
+                echo "❌ $file 对应的 DNS 记录删除失败"
+              fi
+              
+              rm -f temp_deleted_file.json
+            fi
+          done < deleted_files.txt
+        fi
+    
+    - name: 提交更新的域名记录
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if git diff --quiet; then
+          echo "没有需要提交的更改"
+        else
+          git add domains/
+          git commit -m "自动更新域名记录 [skip ci]" || echo "没有需要提交的更改"
+          git push || echo "推送失败或没有更改"
+        fi
+
+  comment:
+    name: 添加评论
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: always() && github.event_name == 'pull_request'
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 生成评论内容
+      id: comment
+      run: |
+        comment=""
+        
+        if [ "${{ needs.validate.result }}" = "success" ]; then
+          comment="## ✅ 验证通过\n\n您的子域名申请已通过验证，等待管理员审核和合并。\n\n"
+        else
+          comment="## ❌ 验证失败\n\n您的子域名申请验证失败，请检查以下问题后重新提交：\n\n"
+        fi
+        
+        # 获取变更文件并添加详细信息
+        files_changed="${{ needs.validate.outputs.changed-files }}"
+        if [ -n "$files_changed" ]; then
+          comment="${comment}### 📋 检查的文件\n\n"
+          for file in $files_changed; do
+            comment="${comment}- \`$file\`\n"
+          done
+        fi
+        
+        comment="${comment}\n### 📖 使用说明\n\n"
+        comment="${comment}- 请确保您的 JSON 文件格式正确\n"
+        comment="${comment}- 子域名不能与现有记录冲突\n"
+        comment="${comment}- GitHub 账户需要满足年龄要求\n"
+        comment="${comment}- 每个用户最多可申请 3 个子域名\n\n"
+        comment="${comment}如有疑问，请查看 [用户指南](../blob/main/docs/USER_GUIDE.md) 或提出 issue。"
+        
+        # 保存评论内容
+        echo -e "$comment" > comment.md
+    
+    - name: 添加 PR 评论
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const comment = fs.readFileSync('comment.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

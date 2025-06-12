@@ -1,0 +1,57 @@
+# 域名配置文件
+domains:
+  ciao.su:
+    enabled: true
+    cloudflare_zone_id: ""  # 需要填入实际的 Zone ID
+    description: "免费子域名服务"
+    restrictions:
+      - "禁止成人内容"
+      - "禁止违法活动"
+      - "禁止垃圾邮件和钓鱼"
+    allowed_record_types:
+      - "A"
+      - "AAAA"
+      - "CNAME"
+      - "MX"
+      - "TXT"
+      - "SRV"
+    max_records_per_subdomain: 5
+  
+  ciallo.de:
+    enabled: false
+    cloudflare_zone_id: ""
+    description: "即将开放 - 目前不接受申请"
+    restrictions:
+      - "禁止成人内容"
+      - "禁止违法活动"
+      - "禁止垃圾邮件和钓鱼"
+    allowed_record_types:
+      - "A"
+      - "AAAA"
+      - "CNAME"
+      - "MX"
+      - "TXT"
+      - "SRV"
+    max_records_per_subdomain: 5
+
+# 全局设置
+settings:
+  auto_approve: false
+  require_github_verification: true
+  min_account_age_days: 30
+  max_subdomains_per_user: 3
+  blocked_subdomains:
+    - "www"
+    - "mail"
+    - "ftp"
+    - "admin"
+    - "root"
+    - "api"
+    - "cdn"
+    - "ns1"
+    - "ns2"
+    - "mx"
+    - "mx1"
+    - "mx2"
+  blocked_users: []
+  blocked_emails: []
