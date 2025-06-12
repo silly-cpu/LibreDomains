@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Any, Optional, Tuple
 
 import requests
+from scripts.utils.common import load_json_file
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -35,8 +36,10 @@ def load_config(config_path: str = None) -> Dict[str, Any]:
     if config_path is None:
         config_path = os.path.join(os.path.dirname(__file__), '../../config/domains.json')
     
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    data, error = load_json_file(config_path)
+    if error:
+        raise Exception(f"加载配置文件失败: {error}")
+    return data
 
 
 def get_domain_files(domain: str, domains_dir: str = None) -> List[str]:
@@ -71,11 +74,8 @@ def load_domain_config(file_path: str) -> Optional[Dict[str, Any]]:
     Returns:
         配置信息字典，如果加载失败则为 None
     """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return None
+    data, error = load_json_file(file_path)
+    return data  # 返回 None 如果加载失败
 
 
 def get_record_fqdn(domain: str, subdomain: str, record: Dict[str, Any]) -> str:

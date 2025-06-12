@@ -117,9 +117,12 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None)
         
         return all_valid, markdown
     except Exception as e:
+        import traceback
         error_msg = f"验证过程中发生错误: {str(e)}"
-        print(error_msg, file=sys.stderr)
-        return False, f"## ❌ 验证失败\n\n{error_msg}"
+        # 添加详细的错误追踪信息
+        traceback_info = traceback.format_exc()
+        print(f"详细错误信息:\n{traceback_info}", file=sys.stderr)
+        return False, f"## ❌ 验证失败\n\n{error_msg}\n\n详细错误信息请查看 Actions 日志。"
 
 
 def main():

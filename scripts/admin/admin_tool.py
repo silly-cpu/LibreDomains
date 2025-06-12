@@ -17,6 +17,7 @@ from typing import Dict, List, Any, Optional
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from scripts.validation.domain_validator import load_config
+from scripts.utils.common import load_json_file
 
 
 class AdminTool:
@@ -190,11 +191,11 @@ class AdminTool:
         if not os.path.isfile(file_path):
             return None
         
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
+        data, error = load_json_file(file_path)
+        if error:
+            print(f"警告: 无法加载配置文件 {file_path}: {error}", file=sys.stderr)
             return None
+        return data
     
     def remove_subdomain(self, domain: str, subdomain: str) -> bool:
         """

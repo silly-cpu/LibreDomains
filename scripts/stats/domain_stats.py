@@ -18,6 +18,7 @@ from typing import Dict, List, Any, Optional, Tuple
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from scripts.validation.domain_validator import load_config
+from scripts.utils.common import load_json_file
 
 
 def load_domain_config(file_path: str) -> Optional[Dict[str, Any]]:
@@ -30,11 +31,11 @@ def load_domain_config(file_path: str) -> Optional[Dict[str, Any]]:
     Returns:
         配置信息字典，如果加载失败则为 None
     """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
+    data, error = load_json_file(file_path)
+    if error:
+        print(f"警告: 无法加载配置文件 {file_path}: {error}", file=sys.stderr)
         return None
+    return data
 
 
 def get_domain_files(domain: str, domains_dir: str = None) -> List[str]:

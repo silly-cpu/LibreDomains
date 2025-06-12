@@ -13,6 +13,7 @@ import re
 import sys
 import glob
 from typing import Dict, List, Any, Optional, Tuple
+from scripts.utils.common import load_json_file
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -31,8 +32,10 @@ def load_config(config_path: str = None) -> Dict[str, Any]:
     if config_path is None:
         config_path = os.path.join(os.path.dirname(__file__), '../../config/domains.json')
     
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    data, error = load_json_file(config_path)
+    if error:
+        raise Exception(f"加载配置文件失败: {error}")
+    return data
 
 
 def is_valid_domain_name(domain_name: str) -> bool:
@@ -187,31 +190,15 @@ def validate_domain_config(file_path: str, config: Optional[Dict[str, Any]] = No
     
     # 加载项目配置
     if config is None:
-        config = load_config()
+        try:
+            config = load_config()
+        except Exception as e:
+            return False, [str(e)]
     
     # 加载配置文件
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            domain_config = json.load(f)
-    except json.JSONDecodeError as e:
-        # 提供更详细的JSON格式错误信息
-        error_msg = f"JSON 格式错误: {str(e)}"
-        if hasattr(e, 'lineno') and hasattr(e, 'colno'):
-            error_msg += f"\n位置: 第 {e.lineno} 行, 第 {e.colno} 列"
-        if hasattr(e, 'msg'):
-            if "Expecting ',' delimiter" in e.msg:
-                error_msg += "\n提示: 可能缺少逗号分隔符，请检查 JSON 对象中的字段是否用逗号正确分隔"
-            elif "Expecting ':' delimiter" in e.msg:
-                error_msg += "\n提示: 可能缺少冒号，请检查键值对格式是否正确"
-            elif "Expecting value" in e.msg:
-                error_msg += "\n提示: 可能有多余的逗号或缺少值"
-            elif "Unterminated string" in e.msg:
-                error_msg += "\n提示: 字符串未正确闭合，请检查引号是否匹配"
-        return False, [error_msg]
-    except FileNotFoundError:
-        return False, [f"文件不存在: {file_path}"]
-    except Exception as e:
-        return False, [f"读取文件错误: {str(e)}"]
+    domain_config, error = load_json_file(file_path)
+    if error:
+        return False, [error]
     
     # 检查 owner 部分
     if 'owner' not in domain_config:
