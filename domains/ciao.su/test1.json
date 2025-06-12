@@ -11,6 +11,6 @@
       "content": "8.8.8.8",
       "ttl": 3600,
       "proxied": true
-    },
+    }
   ]
 }
