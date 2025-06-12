@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SubdomainRequest",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "type": { "type": "string", "enum": ["A", "AAAA", "CNAME", "TXT", "NS", "MX", "SRV", "PTR"] },
+    "content": { "type": "string" },
+    "ttl": { "type": "integer", "minimum": 1 },
+    "proxied": { "type": "boolean" }
+  },
+  "required": ["name", "type", "content"],
+  "additionalProperties": false
+}

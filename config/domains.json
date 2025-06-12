@@ -1,0 +1,14 @@
+[
+  {
+    "domain": "ciao.su",
+    "enabled": true,
+    "zone_id": "<YOUR_CF_ZONE_ID_FOR_CIAO_SU>",
+    "subdomains": []
+  },
+  {
+    "domain": "ciallo.de",
+    "enabled": false,
+    "zone_id": "<YOUR_CF_ZONE_ID_FOR_CIALLO_DE>",
+    "subdomains": []
+  }
+]
