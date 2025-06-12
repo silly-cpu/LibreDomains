@@ -1,0 +1,16 @@
+{
+  "owner": {
+    "name": "tsengvee",
+    "github": "tsengvee",
+    "email": "tsengvee@test.com"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "121.121.121.121",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}
