@@ -27,6 +27,110 @@ except ImportError as e:
     sys.exit(1)
 
 
+def check_domain_ownership(file_path: str, pr_author: str, repo_owner: str, repo_name: str, github_token: Optional[str] = None) -> List[str]:
+    """
+    检查域名所有权
+    
+    Args:
+        file_path: 域名配置文件路径
+        pr_author: PR作者的GitHub用户名
+        repo_owner: 仓库所有者
+        repo_name: 仓库名称
+        github_token: GitHub API token (可选)
+    
+    Returns:
+        错误信息列表，如果为空则表示验证通过
+    """
+    errors = []
+    
+    try:
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            # 新文件，无需检查所有权
+            return errors
+        
+        # 读取现有文件内容
+        with open(file_path, 'r', encoding='utf-8') as f:
+            try:
+                domain_config = json.load(f)
+            except json.JSONDecodeError:
+                # JSON格式错误会由其他验证器处理
+                return errors
+        
+        # 检查配置中的所有者信息
+        owner_field = domain_config.get('owner', {})
+        if isinstance(owner_field, dict):
+            config_owner = owner_field.get('username', '').lower()
+        elif isinstance(owner_field, str):
+            config_owner = owner_field.lower()
+        else:
+            errors.append("域名配置中的 'owner' 字段格式不正确")
+            return errors
+        
+        # 检查PR作者是否为配置的所有者
+        if config_owner and config_owner != pr_author.lower():
+            # 使用GitHub API检查历史提交信息
+            original_author = get_original_author(file_path, repo_owner, repo_name, github_token)
+            
+            if original_author and original_author.lower() != pr_author.lower():
+                errors.append(
+                    f"权限验证失败: 该域名配置最初由用户 '{original_author}' 创建，"
+                    f"当前PR作者 '{pr_author}' 无权修改此配置。\n"
+                    f"如果您需要修改此域名配置，请："
+                    f"\n  1. 联系原作者 @{original_author} 进行修改"
+                    f"\n  2. 或者提供域名所有权证明"
+                    f"\n  3. 或者联系项目维护者协助处理"
+                )
+        
+    except Exception as e:
+        errors.append(f"所有权验证过程中发生错误: {str(e)}")
+    
+    return errors
+
+
+def get_original_author(file_path: str, repo_owner: str, repo_name: str, github_token: Optional[str] = None) -> Optional[str]:
+    """
+    通过GitHub API获取文件的原始作者
+    
+    Args:
+        file_path: 文件路径
+        repo_owner: 仓库所有者
+        repo_name: 仓库名称
+        github_token: GitHub API token
+    
+    Returns:
+        原始作者的用户名，如果无法获取则返回None
+    """
+    if not github_token:
+        return None
+    
+    try:
+        import requests
+        
+        # 获取文件的提交历史
+        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits"
+        headers = {
+            'Authorization': f'token {github_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        params = {
+            'path': file_path,
+            'per_page': 100
+        }
+        
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            commits = response.json()
+            if commits:
+                # 获取最早的提交（最后一个）
+                earliest_commit = commits[-1]
+                return earliest_commit['author']['login']
+    except Exception as e:
+        print(f"获取原始作者信息时发生错误: {e}", file=sys.stderr)
+    
+    return None
+
+
 def format_validation_result(results: Dict[str, List[str]]) -> str:
     """
     格式化验证结果为 Markdown 格式
@@ -84,6 +188,11 @@ def format_validation_result(results: Dict[str, List[str]]) -> str:
         markdown.append("- **缺少冒号**: 确保键值对用冒号分隔")
         markdown.append("- **引号不匹配**: 确保所有字符串用双引号包围")
         markdown.append("- **多余逗号**: 删除最后一个字段后的多余逗号")
+        markdown.append("")
+        markdown.append("### 权限问题")
+        markdown.append("- **域名所有权**: 只有域名配置的原作者才能修改其配置")
+        markdown.append("- **协作修改**: 如需修改他人的域名配置，请先联系原作者")
+        markdown.append("- **争议处理**: 如有争议，请联系项目维护者")
         markdown.append("")
         markdown.append("### 推荐工具")
         markdown.append("- 使用 [JSONLint](https://jsonlint.com/) 验证 JSON 格式")
@@ -166,7 +275,9 @@ def format_validation_result_console(results: Dict[str, List[str]]) -> str:
     return "\n".join(output)
 
 
-def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None, console_output: bool = False) -> Tuple[bool, str]:
+def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None, console_output: bool = False, 
+                   pr_author: Optional[str] = None, repo_owner: Optional[str] = None, 
+                   repo_name: Optional[str] = None, github_token: Optional[str] = None) -> Tuple[bool, str]:
     """
     检查 Pull Request 中的文件
     
@@ -174,6 +285,10 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None,
         pr_files: Pull Request 中的文件路径列表
         config: 项目配置信息 (可选)
         console_output: 是否输出控制台格式 (默认为 Markdown 格式)
+        pr_author: PR作者的GitHub用户名 (可选)
+        repo_owner: 仓库所有者 (可选)
+        repo_name: 仓库名称 (可选)
+        github_token: GitHub API token (可选)
     
     Returns:
         (是否所有文件有效, 格式化的验证结果)
@@ -221,6 +336,18 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None,
         # 验证文件
         all_valid, results = validate_pull_request(normalized_files, config)
         
+        # 如果提供了PR作者信息，则进行所有权验证
+        if pr_author and repo_owner and repo_name:
+            for file_path in normalized_files:
+                ownership_errors = check_domain_ownership(
+                    file_path, pr_author, repo_owner, repo_name, github_token
+                )
+                if ownership_errors:
+                    if file_path not in results:
+                        results[file_path] = []
+                    results[file_path].extend(ownership_errors)
+                    all_valid = False
+        
         # 如果有缺失文件，添加到结果中
         for file_path in missing_files:
             results[file_path] = [f"文件不存在: {file_path}"]
@@ -263,6 +390,10 @@ def main():
     parser.add_argument('--output', help='输出文件路径')
     parser.add_argument('--debug', action='store_true', help='启用调试模式')
     parser.add_argument('--console', action='store_true', help='输出控制台格式（默认为 Markdown 格式）')
+    parser.add_argument('--pr-author', help='PR作者的GitHub用户名')
+    parser.add_argument('--repo-owner', help='仓库所有者')
+    parser.add_argument('--repo-name', help='仓库名称')
+    parser.add_argument('--github-token', help='GitHub API token')
     
     args = parser.parse_args()
     
@@ -286,7 +417,11 @@ def main():
         
         # 检查文件，如果没有指定输出文件且没有启用控制台模式，则自动启用控制台模式
         console_mode = args.console or not args.output
-        all_valid, result = check_pr_files(args.files, config, console_output=console_mode)
+        all_valid, result = check_pr_files(
+            args.files, config, console_output=console_mode,
+            pr_author=args.pr_author, repo_owner=args.repo_owner,
+            repo_name=args.repo_name, github_token=args.github_token
+        )
         
         # 输出结果
         if args.output:

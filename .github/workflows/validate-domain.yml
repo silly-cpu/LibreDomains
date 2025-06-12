@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      pull-requests: read
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -39,10 +40,17 @@ jobs:
         run: |
           echo "=== 开始验证域名配置 ==="
           echo "更改的文件: ${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "PR作者: ${{ github.event.pull_request.user.login }}"
           echo ""
           
-          # 运行验证脚本并直接输出到控制台
-          if python scripts/bot/pr_checker.py --files ${{ steps.changed-files.outputs.all_changed_files }} --debug; then
+          # 运行验证脚本并直接输出到控制台，包含所有权验证
+          if python scripts/bot/pr_checker.py \
+            --files ${{ steps.changed-files.outputs.all_changed_files }} \
+            --pr-author "${{ github.event.pull_request.user.login }}" \
+            --repo-owner "${{ github.repository_owner }}" \
+            --repo-name "${{ github.event.repository.name }}" \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --debug; then
             echo ""
             echo "🎉 所有域名配置验证通过！"
           else
