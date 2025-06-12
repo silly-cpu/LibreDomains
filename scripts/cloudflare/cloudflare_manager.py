@@ -64,6 +64,34 @@ class CloudflareManager:
         
         # 设置请求超时
         self.timeout = self.config.get('cloudflare_timeout', 30)
+        
+        # 验证 API Token 权限
+        self._validate_token()
+
+    def _validate_token(self):
+        """验证 API Token 的有效性和权限"""
+        try:
+            # 测试基本的 API 访问权限
+            response = requests.get(
+                f"{self.base_url}user/tokens/verify",
+                headers=self.headers,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('success', False):
+                    token_info = result.get('result', {})
+                    print(f"API Token 验证成功: {token_info.get('status', 'active')}", file=sys.stderr)
+                else:
+                    raise Exception(f"Token 验证失败: {result.get('errors', [])}")
+            else:
+                raise Exception(f"Token 验证请求失败: {response.status_code} - {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"警告: 无法验证 API Token: {str(e)}", file=sys.stderr)
+        except Exception as e:
+            print(f"警告: Token 验证异常: {str(e)}", file=sys.stderr)
 
     def _load_config(self, config_path: str = None) -> Dict[str, Any]:
         """
@@ -154,58 +182,91 @@ class CloudflareManager:
         """
         endpoint = f'zones/{zone_id}/dns_records'
         
-        # 修复：使用 requests 的 params 参数自动处理 URL 编码
-        params = {}
-        if record_type:
-            params['type'] = record_type
-        if name:
-            params['name'] = name
-        
         try:
-            url = self.base_url + endpoint.lstrip('/')
+            # 首先验证 Zone 访问权限
+            zone_valid, zone_msg = self.verify_zone_access(zone_id)
+            if not zone_valid:
+                raise Exception(f"Zone 访问验证失败: {zone_msg}")
             
-            if params:
-                response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
-            else:
-                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            # 构建查询参数
+            params = {}
+            if record_type:
+                params['type'] = record_type
+            
+            # 修复：分步查询，避免复杂的 name 参数问题
+            url = self.base_url + endpoint.lstrip('/')
+            response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
             
             response.raise_for_status()
             result = response.json()
             
             if not result.get('success', False):
                 errors = result.get('errors', [])
-                error_msg = ', '.join([err.get('message', str(err)) for err in errors])
-                raise Exception(f"Cloudflare API 错误: {error_msg}")
+                error_details = []
+                for err in errors:
+                    if isinstance(err, dict):
+                        error_details.append(f"Code: {err.get('code', 'N/A')}, Message: {err.get('message', str(err))}")
+                    else:
+                        error_details.append(str(err))
+                raise Exception(f"Cloudflare API 错误: {'; '.join(error_details)}")
             
-            return result.get('result', [])
+            records = result.get('result', [])
+            
+            # 如果指定了 name，手动过滤结果
+            if name:
+                filtered_records = []
+                for record in records:
+                    if record.get('name', '').lower() == name.lower():
+                        filtered_records.append(record)
+                return filtered_records
+            
+            return records
             
         except requests.exceptions.RequestException as e:
-            # 增强错误处理，提供更详细的错误信息
             error_msg = str(e)
+            
+            # 提供更详细的错误分析
             if "400 Client Error" in error_msg:
-                # 检查常见的 400 错误原因
                 debug_info = {
                     'zone_id': zone_id,
                     'params': params,
-                    'url': url,
-                    'headers': {k: v if k != 'Authorization' and k != 'X-Auth-Key' else '***' for k, v in self.headers.items()}
+                    'api_token_type': 'Token' if self.is_token else 'Key',
+                    'error': error_msg
                 }
                 
-                if name:
-                    raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
-                                  f"1. Zone ID '{zone_id}' 不正确\n"
-                                  f"2. 域名格式 '{name}' 不正确\n"
-                                  f"3. API Token 权限不足\n"
-                                  f"4. 查询参数: {params}\n"
-                                  f"原始错误: {error_msg}")
-                else:
-                    raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
-                                  f"1. Zone ID '{zone_id}' 不正确\n"
-                                  f"2. API Token 权限不足或已过期\n"
-                                  f"3. 查询参数: {params}\n"
-                                  f"原始错误: {error_msg}")
-            raise Exception(f"请求失败: {error_msg}")
-    
+                # 尝试获取响应内容以获得更多信息
+                try:
+                    if hasattr(e, 'response') and e.response:
+                        response_text = e.response.text
+                        debug_info['response_body'] = response_text
+                except:
+                    pass
+                
+                raise Exception(f"DNS 记录查询失败 (400 错误):\n"
+                              f"可能原因:\n"
+                              f"1. API Token 缺少 Zone:Read 权限\n"
+                              f"2. Zone ID '{zone_id}' 不正确或无权访问\n"
+                              f"3. API Token 已过期或被撤销\n"
+                              f"4. 查询参数格式错误\n"
+                              f"调试信息: {debug_info}\n"
+                              f"原始错误: {error_msg}")
+            elif "401" in error_msg:
+                raise Exception(f"API Token 认证失败 (401 错误):\n"
+                              f"请检查:\n"
+                              f"1. API Token 是否正确\n"
+                              f"2. Token 是否已过期\n"
+                              f"3. Token 权限是否足够\n"
+                              f"原始错误: {error_msg}")
+            elif "403" in error_msg:
+                raise Exception(f"API Token 权限不足 (403 错误):\n"
+                              f"请确保 API Token 具有以下权限:\n"
+                              f"1. Zone:Read\n"
+                              f"2. DNS:Edit\n"
+                              f"3. 对应 Zone 的访问权限\n"
+                              f"原始错误: {error_msg}")
+            else:
+                raise Exception(f"DNS 记录查询请求失败: {error_msg}")
+
     def create_dns_record(self, zone_id: str, record_type: str, name: str, content: str, 
                          ttl: int = 3600, proxied: bool = True, priority: int = None) -> Dict[str, Any]:
         """
@@ -437,12 +498,32 @@ class CloudflareManager:
             (是否有访问权限, 错误信息)
         """
         try:
-            result = self._request('GET', f'zones/{zone_id}')
-            zone_info = result.get('result', {})
-            zone_name = zone_info.get('name', 'Unknown')
-            return True, f"Zone '{zone_name}' 访问正常"
+            url = f"{self.base_url}zones/{zone_id}"
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('success', False):
+                    zone_info = result.get('result', {})
+                    zone_name = zone_info.get('name', 'Unknown')
+                    return True, f"Zone '{zone_name}' 访问正常"
+                else:
+                    errors = result.get('errors', [])
+                    error_msg = '; '.join([err.get('message', str(err)) for err in errors])
+                    return False, f"Zone API 返回错误: {error_msg}"
+            elif response.status_code == 403:
+                return False, f"Zone 访问权限不足 (403): API Token 没有访问此 Zone 的权限"
+            elif response.status_code == 404:
+                return False, f"Zone 不存在 (404): Zone ID '{zone_id}' 可能不正确"
+            elif response.status_code == 401:
+                return False, f"API Token 认证失败 (401): Token 可能无效或已过期"
+            else:
+                return False, f"Zone 访问失败: HTTP {response.status_code} - {response.text}"
+                
+        except requests.exceptions.RequestException as e:
+            return False, f"Zone 访问请求异常: {str(e)}"
         except Exception as e:
-            return False, f"Zone 访问失败: {str(e)}"
+            return False, f"Zone 访问验证异常: {str(e)}"
 
     def debug_dns_query(self, zone_id: str, name: str = None) -> Dict[str, Any]:
         """
@@ -460,7 +541,8 @@ class CloudflareManager:
             'query_name': name,
             'api_token_type': 'Token' if self.is_token else 'Key',
             'base_url': self.base_url,
-            'timeout': self.timeout
+            'timeout': self.timeout,
+            'headers_masked': {k: v if k not in ['Authorization', 'X-Auth-Key'] else '***' for k, v in self.headers.items()}
         }
         
         # 验证 Zone 访问权限
@@ -475,33 +557,35 @@ class CloudflareManager:
             
         # 尝试获取所有记录（不使用 name 过滤）
         try:
-            all_records = self._request('GET', f'zones/{zone_id}/dns_records')
-            debug_info['total_records'] = len(all_records.get('result', []))
+            records = self.list_dns_records(zone_id)
+            debug_info['total_records'] = len(records)
             
             if name:
                 # 手动过滤记录
                 matching_records = [
-                    record for record in all_records.get('result', [])
+                    record for record in records
                     if record.get('name', '').lower() == name.lower()
                 ]
                 debug_info['matching_records'] = len(matching_records)
-                debug_info['sample_records'] = [
+                debug_info['matching_record_details'] = [
                     {
+                        'id': record.get('id'),
                         'name': record.get('name'),
                         'type': record.get('type'),
                         'content': record.get('content')
                     }
-                    for record in all_records.get('result', [])[:5]  # 显示前5条记录作为样本
+                    for record in matching_records
                 ]
-            else:
-                debug_info['sample_records'] = [
-                    {
-                        'name': record.get('name'),
-                        'type': record.get('type'),
-                        'content': record.get('content')
-                    }
-                    for record in all_records.get('result', [])[:5]
-                ]
+            
+            # 显示前5条记录作为样本
+            debug_info['sample_records'] = [
+                {
+                    'name': record.get('name'),
+                    'type': record.get('type'),
+                    'content': record.get('content')[:50] + ('...' if len(record.get('content', '')) > 50 else '')
+                }
+                for record in records[:5]
+            ]
                 
         except Exception as e:
             debug_info['records_query_error'] = str(e)
