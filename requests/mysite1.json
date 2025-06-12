@@ -1,0 +1,15 @@
+{
+  "domain": "ciao.su",
+  "subdomain": "mysite1",
+  "owner": {
+    "username": "your-github-username",
+    "email": "your-email@example.com"
+  },
+  "record": {
+    "type": "A",
+    "value": "192.168.177.121",
+    "ttl": 3600,
+    "proxied": false
+  },
+  "description": "我的个人网站"
+}
