@@ -9,7 +9,7 @@
       "type": "A",
       "name": "@",
       "content": "185.199.101.153",
-      "ttl": 3600
+      "ttl": 3600,
       "proxied": false
     },
     {
