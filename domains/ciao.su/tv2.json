@@ -1,0 +1,23 @@
+{
+  "owner": {
+    "name": "tsengvee",
+    "github": "tsengvee",
+    "email": "tsengvee@xxx.com"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "185.199.101.153",
+      "ttl": 3600,
+      "proxied": true
+    },
+    {
+      "type": "CNAME",
+      "name": "www",
+      "content": "xxx.com",
+      "ttl": 3600,
+      "proxied": false
+    }
+  ]
+}
