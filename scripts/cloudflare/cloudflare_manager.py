@@ -85,7 +85,7 @@ class CloudflareManager:
         
         return config
     
-    def _request(self, method: str, endpoint: str, data: dict = None) -> Dict[str, Any]:
+    def _request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> Dict[str, Any]:
         """
         发送 API 请求
         
@@ -93,6 +93,7 @@ class CloudflareManager:
             method: HTTP 方法
             endpoint: API 端点
             data: 请求数据 (可选)
+            params: URL 参数 (可选)
         
         Returns:
             API 响应
@@ -101,13 +102,13 @@ class CloudflareManager:
         
         try:
             if method.upper() == 'GET':
-                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+                response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
             elif method.upper() == 'POST':
-                response = requests.post(url, headers=self.headers, json=data, timeout=self.timeout)
+                response = requests.post(url, headers=self.headers, json=data, params=params, timeout=self.timeout)
             elif method.upper() == 'PUT':
-                response = requests.put(url, headers=self.headers, json=data, timeout=self.timeout)
+                response = requests.put(url, headers=self.headers, json=data, params=params, timeout=self.timeout)
             elif method.upper() == 'DELETE':
-                response = requests.delete(url, headers=self.headers, timeout=self.timeout)
+                response = requests.delete(url, headers=self.headers, params=params, timeout=self.timeout)
             else:
                 raise ValueError(f"不支持的 HTTP 方法: {method}")
             
@@ -151,40 +152,59 @@ class CloudflareManager:
         Returns:
             DNS 记录列表
         """
-        import urllib.parse
+        endpoint = f'zones/{zone_id}/dns_records'
         
+        # 修复：使用 requests 的 params 参数自动处理 URL 编码
         params = {}
         if record_type:
             params['type'] = record_type
         if name:
             params['name'] = name
         
-        endpoint = f'zones/{zone_id}/dns_records'
-        if params:
-            # 修复：使用 urllib.parse.urlencode 正确编码参数
-            query_string = urllib.parse.urlencode(params)
-            endpoint += f'?{query_string}'
-        
         try:
-            result = self._request('GET', endpoint)
+            url = self.base_url + endpoint.lstrip('/')
+            
+            if params:
+                response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
+            else:
+                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            if not result.get('success', False):
+                errors = result.get('errors', [])
+                error_msg = ', '.join([err.get('message', str(err)) for err in errors])
+                raise Exception(f"Cloudflare API 错误: {error_msg}")
+            
             return result.get('result', [])
-        except Exception as e:
+            
+        except requests.exceptions.RequestException as e:
             # 增强错误处理，提供更详细的错误信息
             error_msg = str(e)
             if "400 Client Error" in error_msg:
                 # 检查常见的 400 错误原因
+                debug_info = {
+                    'zone_id': zone_id,
+                    'params': params,
+                    'url': url,
+                    'headers': {k: v if k != 'Authorization' and k != 'X-Auth-Key' else '***' for k, v in self.headers.items()}
+                }
+                
                 if name:
                     raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
                                   f"1. Zone ID '{zone_id}' 不正确\n"
                                   f"2. 域名格式 '{name}' 不正确\n"
                                   f"3. API Token 权限不足\n"
+                                  f"4. 查询参数: {params}\n"
                                   f"原始错误: {error_msg}")
                 else:
                     raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
                                   f"1. Zone ID '{zone_id}' 不正确\n"
                                   f"2. API Token 权限不足或已过期\n"
+                                  f"3. 查询参数: {params}\n"
                                   f"原始错误: {error_msg}")
-            raise e
+            raise Exception(f"请求失败: {error_msg}")
     
     def create_dns_record(self, zone_id: str, record_type: str, name: str, content: str, 
                          ttl: int = 3600, proxied: bool = True, priority: int = None) -> Dict[str, Any]:
@@ -316,11 +336,11 @@ class CloudflareManager:
         except Exception as e:
             result['errors'].append(f"调试查询失败: {str(e)}")
         
-        # 获取现有记录 - 修复：先获取所有记录，然后手动过滤
+        # 获取现有记录 - 修复：直接获取所有记录，然后手动过滤
         existing_records = []
         try:
-            all_records_result = self._request('GET', f'zones/{zone_id}/dns_records')
-            all_records = all_records_result.get('result', [])
+            all_records = self._request('GET', f'zones/{zone_id}/dns_records')
+            all_records_list = all_records.get('result', [])
             
             # 手动过滤相关记录
             for record in records:
@@ -332,7 +352,7 @@ class CloudflareManager:
                 
                 # 查找匹配的现有记录
                 matching_records = [
-                    r for r in all_records 
+                    r for r in all_records_list 
                     if r.get('name', '').lower() == record_name.lower()
                 ]
                 existing_records.extend(matching_records)
