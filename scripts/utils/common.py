@@ -28,7 +28,7 @@ def load_json_file(file_path: str) -> Tuple[Optional[Dict[str, Any]], Optional[s
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f), None
     except json.JSONDecodeError as e:
-        return None, f"JSON 解析错误: {str(e)}"
+        return None, f"JSON 格式错误: {str(e)}"
     except FileNotFoundError:
         return None, f"文件不存在: {file_path}"
     except Exception as e:
@@ -159,7 +159,7 @@ def get_subdomain_from_path(file_path: str) -> Tuple[str, str]:
         (域名, 子域名)
     """
     # 预期路径格式: */domains/domain.com/subdomain.json
-    parts = file_path.split(os.sep)
+    parts = file_path.replace('\\', '/').split('/')
     domain_index = -1
     
     for i, part in enumerate(parts):

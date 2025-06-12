@@ -4,13 +4,13 @@
       "name": "ciao.su",
       "enabled": true,
       "description": "基本二级域名",
-      "cloudflare_zone_id": "your_cloudflare_zone_id_for_ciao_su"
+      "cloudflare_zone_id": "fe810c0a3352cd3c33e3f27c5be38a3c"
     },
     {
       "name": "ciallo.de",
-      "enabled": false,
-      "description": "备用二级域名（暂未开放申请）",
-      "cloudflare_zone_id": "your_cloudflare_zone_id_for_ciallo_de"
+      "enabled": true,
+      "description": "备用二级域名",
+      "cloudflare_zone_id": "cf22f56a4dbdab9fd81a7f2048ffa457"
     }
   ],
   "record_types": ["A", "AAAA", "CNAME", "TXT", "MX"],
