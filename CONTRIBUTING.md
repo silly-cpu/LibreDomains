@@ -1,199 +1,280 @@
 # Contributing to LibreDomains
 
-Thank you for your interest in contributing to LibreDomains! This document provides guidelines for different types of contributions.
+Thank you for your interest in contributing to LibreDomains! This document provides guidelines and information for contributors.
 
-## 🚀 For Users (Subdomain Requests)
+## 🤝 Ways to Contribute
 
-### Quick Start
+### For Users
+- 🐛 **Report Bugs**: Found an issue? Let us know!
+- 💡 **Suggest Features**: Have ideas for improvements?
+- 📚 **Improve Documentation**: Help make our guides clearer
+- 🧪 **Test New Features**: Try beta features and provide feedback
 
-1. **Fork this repository**
-2. **Create your request file** in `requests/` directory
-3. **Submit a Pull Request**
-4. **Wait for automated validation and approval**
+### For Developers
+- 🔧 **Fix Bugs**: Help resolve reported issues
+- ✨ **Add Features**: Implement new functionality
+- 🏗️ **Improve Infrastructure**: Enhance CI/CD, automation
+- 🔍 **Code Review**: Review pull requests from other contributors
 
-### Request File Format
+## 🚀 Getting Started
 
-Create a JSON file named `your-subdomain.json` in the `requests/` directory:
+### Development Setup
 
-```json
-{
-  "domain": "ciao.su",
-  "subdomain": "your-subdomain",
-  "owner": {
-    "username": "your-github-username",
-    "email": "your-email@example.com"
-  },
-  "record": {
-    "type": "A",
-    "value": "192.168.1.1",
-    "ttl": 3600,
-    "proxied": false
-  },
-  "description": "Brief description of your subdomain usage"
-}
-```
-
-### Examples
-
-Check the `requests/` directory for example files:
-- `example-personal-website.json` - Personal website with CNAME
-- `example-api-service.json` - API service with A record
-- `example-mail-server.json` - Mail server with MX record
-- `example-ipv6-website.json` - IPv6 website with AAAA record
-
-## 👨‍💻 For Developers
-
-### Setting Up Development Environment
-
-1. **Clone the repository**
+1. **Fork and Clone**
    ```bash
    git clone https://github.com/your-username/LibreDomains-beta.git
    cd LibreDomains-beta
    ```
 
-2. **Install dependencies**
+2. **Install Dependencies**
    ```bash
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Set Up Environment**
    ```bash
-   export CLOUDFLARE_API_TOKEN="your-token-here"
+   # Copy example environment file
+   cp .env.example .env
+   
+   # Add your Cloudflare API token (for testing)
+   echo "CLOUDFLARE_API_TOKEN=your_token_here" >> .env
    ```
 
-### Testing
+4. **Run Tests**
+   ```bash
+   npm test
+   npm run validate requests/example-personal-website.json
+   ```
 
-```bash
-# Test request validation
-npm run validate requests/example-personal-website.json
+### Project Structure
 
-# Test GitHub user checking
-npm run check-user your-username
-
-# Test DNS deployment (requires API token)
-npm run deploy deploy requests/example-personal-website.json
 ```
+LibreDomains-beta/
+├── .github/workflows/     # GitHub Actions workflows
+├── config/               # Configuration files
+│   ├── domains.yml      # Domain configuration
+│   └── schema.json      # Request validation schema
+├── docs/                # Documentation
+├── domains/             # Deployed DNS records (auto-generated)
+├── requests/            # User subdomain requests
+└── scripts/             # Automation scripts
+    ├── validate-request.js
+    ├── deploy-dns.js
+    ├── cloudflare-api.js
+    └── ...
+```
+
+## 📝 Contribution Guidelines
 
 ### Code Style
 
-- Use ES6+ features
-- Follow existing code patterns
-- Add comments for complex logic
-- Use meaningful variable names
+- Use **consistent indentation** (2 spaces)
+- Follow **JavaScript Standard Style**
+- Add **JSDoc comments** for functions
+- Use **meaningful variable names**
+
+### Commit Messages
+
+Follow the [Conventional Commits](https://conventionalcommits.org/) specification:
+
+```
+type(scope): description
+
+feat(dns): add support for SRV records
+fix(validation): improve IPv6 address validation
+docs(readme): update installation instructions
+chore(deps): update axios to v1.6.0
+```
+
+Types:
+- `feat`: New features
+- `fix`: Bug fixes
+- `docs`: Documentation changes
+- `style`: Code style changes
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
 
 ### Pull Request Process
 
-1. Create a feature branch
-2. Make your changes
-3. Test thoroughly
-4. Update documentation if needed
-5. Submit PR with clear description
+1. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-## 🔧 Types of Contributions
+2. **Make Changes**
+   - Write clear, concise code
+   - Add tests if applicable
+   - Update documentation
 
-### 1. Bug Reports
+3. **Test Your Changes**
+   ```bash
+   npm test
+   npm run validate requests/example-personal-website.json
+   ```
 
-When reporting bugs, please include:
-- Clear description of the issue
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details (OS, Node.js version, etc.)
+4. **Commit and Push**
+   ```bash
+   git add .
+   git commit -m "feat(validation): add SRV record support"
+   git push origin feature/your-feature-name
+   ```
 
-### 2. Feature Requests
+5. **Create Pull Request**
+   - Use a descriptive title
+   - Explain what your changes do
+   - Reference any related issues
+   - Include screenshots if applicable
 
-For new features:
-- Explain the use case
-- Describe the proposed solution
-- Consider backwards compatibility
-- Discuss implementation approach
+### Code Review
 
-### 3. Documentation
+All contributions go through code review:
 
-Documentation improvements are always welcome:
-- Fix typos and grammar
-- Add missing information
-- Improve examples
-- Update outdated content
+- **Be responsive** to feedback
+- **Be respectful** in discussions
+- **Test thoroughly** before requesting review
+- **Keep PRs focused** - one feature/fix per PR
 
-### 4. Code Contributions
+## 🧪 Testing
 
-Code contributions can include:
-- Bug fixes
-- New features
-- Performance improvements
-- Code cleanup and refactoring
+### Manual Testing
 
-## 📏 Contribution Guidelines
+1. **Validate Requests**
+   ```bash
+   node scripts/validate-request.js requests/your-test.json
+   ```
 
-### Do's ✅
+2. **Check GitHub User**
+   ```bash
+   node scripts/check-github-user.js username
+   ```
 
-- Follow the existing code style
-- Write clear commit messages
-- Test your changes thoroughly
-- Update documentation when needed
-- Be respectful in discussions
-- Use meaningful PR titles
+3. **Run Troubleshooter**
+   ```bash
+   node scripts/troubleshoot.js
+   ```
 
-### Don'ts ❌
+### Automated Tests
 
-- Don't submit large PRs without discussion
-- Don't break existing functionality
-- Don't ignore CI/CD failures
-- Don't submit incomplete features
-- Don't use offensive language
+```bash
+# Run all validation tests
+npm test
 
-## 🔍 Review Process
+# Test specific functionality
+npm run validate requests/example-personal-website.json
+npm run check-user example-user
+```
 
-1. **Automated Checks**
-   - Schema validation
-   - Format checking
-   - User verification
+## 🏗️ Development Areas
 
-2. **Maintainer Review**
-   - Code quality
-   - Security considerations
-   - Feature completeness
+### High Priority
+- [ ] Add automated tests for all scripts  
+- [ ] Improve error handling and user feedback
+- [ ] Add support for more DNS record types
+- [ ] Enhance security and abuse prevention
 
-3. **Approval & Merge**
-   - Final approval by maintainer
-   - Automatic deployment
+### Medium Priority
+- [ ] Web interface for submitting requests
+- [ ] API for programmatic access
+- [ ] Statistics dashboard
+- [ ] Notification system for users
 
-## 🚨 Reporting Issues
+### Low Priority
+- [ ] Multiple domain providers support
+- [ ] Custom DNS servers
+- [ ] Advanced analytics
+- [ ] Mobile app
 
-### Security Issues
+## 🔒 Security
 
-For security vulnerabilities:
-- **DO NOT** create public issues
-- Email security@libredomains.org
-- Include detailed description
-- Wait for response before disclosure
+### Reporting Security Issues
 
-### Regular Issues
+**DO NOT** create public issues for security vulnerabilities.
 
-For bugs and feature requests:
-- Use GitHub Issues
-- Use appropriate labels
-- Provide clear descriptions
-- Include reproduction steps
+Instead:
+1. Email security@libredomains.org
+2. Include detailed description
+3. Provide steps to reproduce
+4. We'll respond within 48 hours
 
-## 📞 Getting Help
+### Security Best Practices
 
-- **Documentation**: Check README and docs/
-- **Issues**: Search existing issues first
-- **Discussions**: Use GitHub Discussions for questions
-- **Community**: Join our community channels
+- Never commit API keys or secrets
+- Validate all user inputs
+- Use secure communication (HTTPS)
+- Follow principle of least privilege
+- Regular dependency updates
+
+## 📋 Issue Guidelines
+
+### Bug Reports
+
+When reporting bugs, include:
+
+- **Clear title** describing the issue
+- **Steps to reproduce** the problem
+- **Expected behavior** vs actual behavior
+- **Environment details** (OS, Node.js version, etc.)
+- **Screenshots** if applicable
+- **Error messages** or logs
+
+### Feature Requests
+
+For new features, provide:
+
+- **Problem description** - what issue does this solve?
+- **Proposed solution** - how should it work?
+- **Alternatives considered** - other ways to solve it?
+- **Additional context** - mockups, examples, etc.
+
+## 🎯 Contribution Areas
+
+### Documentation
+- Improve user guides
+- Add more examples
+- Create video tutorials
+- Translate to other languages
+
+### Code Quality
+- Add unit tests
+- Improve error handling
+- Optimize performance
+- Enhance security
+
+### Features
+- New DNS record types
+- Better validation
+- Improved automation
+- Enhanced monitoring
+
+### Community
+- Help answer questions
+- Review pull requests
+- Triage issues
+- Mentor new contributors
 
 ## 🏆 Recognition
 
-Contributors will be:
-- Listed in README
-- Mentioned in release notes
-- Invited to maintainer team (active contributors)
+Contributors will be recognized:
+
+- **README credits** for significant contributions
+- **GitHub achievements** and badges
+- **Special role** in our Discord server
+- **Early access** to new features
+
+## 📞 Getting Help
+
+Need help contributing?
+
+- **Discord**: Join our community server
+- **Discussions**: Use GitHub Discussions for questions
+- **Email**: Reach out to maintainers directly
+- **Office Hours**: Weekly video calls for contributors
 
 ## 📄 License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing to LibreDomains, you agree that your contributions will be licensed under the MIT License.
 
 ---
 
-Thank you for making LibreDomains better! 🎉
+**Ready to contribute?** Start by looking at [good first issues](https://github.com/bestZwei/LibreDomains-beta/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or reach out if you need help getting started!

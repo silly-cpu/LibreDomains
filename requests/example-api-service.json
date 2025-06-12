@@ -1,15 +1,15 @@
 {
   "domain": "ciao.su",
-  "subdomain": "api",
+  "subdomain": "example-api",
   "owner": {
-    "username": "developer123",
-    "email": "dev@startup.com"
+    "username": "example-dev",
+    "email": "dev@example.com"
   },
   "record": {
     "type": "A",
-    "value": "198.51.100.1",
+    "value": "203.0.113.10",
     "ttl": 3600,
     "proxied": true
   },
-  "description": "REST API service for mobile application"
+  "description": "REST API service for my mobile application backend with user authentication"
 }

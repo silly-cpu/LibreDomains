@@ -69,7 +69,8 @@ class RequestValidator {
         }
         break;
       case 'AAAA':
-        if (!/^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/.test(record.value)) {
+        // 更准确的 IPv6 验证
+        if (!this.isValidIPv6(record.value)) {
           errors.push('Invalid IPv6 address format');
         } else if (record.proxied && this.isPrivateIPv6(record.value)) {
           errors.push('Private IPv6 addresses cannot be used with Cloudflare proxy (proxied: true). Either use a public IP or set proxied to false');
@@ -86,6 +87,18 @@ class RequestValidator {
         }
         if (!record.priority || record.priority < 0 || record.priority > 65535) {
           errors.push('MX record requires valid priority (0-65535)');
+        }
+        break;
+      case 'TXT':
+        // TXT records can contain any text, basic length check
+        if (record.value.length > 255) {
+          errors.push('TXT record value too long (max 255 characters)');
+        }
+        break;
+      case 'SRV':
+        // SRV records should have format: priority weight port target
+        if (!record.priority || !record.weight || !record.port) {
+          errors.push('SRV record requires priority, weight, and port');
         }
         break;
     }
@@ -150,6 +163,13 @@ class RequestValidator {
       }
     }
     return count;
+  }
+
+  // 新增更准确的 IPv6 验证方法
+  isValidIPv6(ip) {
+    // IPv6 正则表达式 - 支持各种格式
+    const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}|::1|::)$/;
+    return ipv6Regex.test(ip);
   }
 }
 

@@ -1,9 +1,9 @@
 {
   "domain": "ciao.su",
-  "subdomain": "mail",
+  "subdomain": "example-mail",
   "owner": {
-    "username": "company",
-    "email": "admin@company.com"
+    "username": "example-admin",
+    "email": "admin@example.com"
   },
   "record": {
     "type": "MX",
@@ -12,5 +12,5 @@
     "ttl": 3600,
     "proxied": false
   },
-  "description": "Company mail server for internal communications"
+  "description": "Mail server configuration for personal email hosting with spam protection"
 }

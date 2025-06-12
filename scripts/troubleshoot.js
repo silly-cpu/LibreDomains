@@ -5,140 +5,191 @@ const yaml = require('js-yaml');
 
 class Troubleshooter {
   constructor() {
+    this.cloudflare = new CloudflareAPI();
     this.domainsConfig = yaml.load(fs.readFileSync(path.join(__dirname, '../config/domains.yml'), 'utf8'));
   }
 
-  async diagnose() {
-    console.log('🔍 LibreDomains Troubleshooting\n');
+  async runDiagnostics() {
+    console.log('🔍 Running LibreDomains troubleshooter...\n');
     
-    // Check 1: Environment variables
-    console.log('1️⃣ Checking environment variables...');
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-    if (!apiToken) {
-      console.log('   ❌ CLOUDFLARE_API_TOKEN not set');
-      return;
+    const issues = [];
+    
+    // Check environment
+    await this.checkEnvironment(issues);
+    
+    // Check configuration files
+    this.checkConfiguration(issues);
+    
+    // Check Cloudflare connectivity
+    await this.checkCloudflareAPI(issues);
+    
+    // Check domain records consistency
+    await this.checkRecordConsistency(issues);
+    
+    // Summary
+    console.log('\n📊 Troubleshooting Summary:');
+    if (issues.length === 0) {
+      console.log('✅ No issues found! System appears to be healthy.');
     } else {
-      console.log('   ✅ CLOUDFLARE_API_TOKEN is set');
+      console.log(`❌ Found ${issues.length} issue(s):`);
+      issues.forEach((issue, index) => {
+        console.log(`${index + 1}. ${issue}`);
+      });
     }
-
-    // Check 2: Cloudflare API connectivity
-    console.log('\n2️⃣ Testing Cloudflare API connectivity...');
-    try {
-      const cloudflare = new CloudflareAPI();
-      
-      for (const [domain, config] of Object.entries(this.domainsConfig.domains)) {
-        if (config.enabled) {
-          console.log(`   Testing ${domain}...`);
-          const records = await cloudflare.getDNSRecords(domain);
-          console.log(`   ✅ ${domain}: ${records.length} records found`);
-        }
-      }
-    } catch (error) {
-      console.log(`   ❌ API Error: ${error.message}`);
-      return;
-    }
-
-    // Check 3: Domain configuration
-    console.log('\n3️⃣ Checking domain configuration...');
-    for (const [domain, config] of Object.entries(this.domainsConfig.domains)) {
-      console.log(`   Domain: ${domain}`);
-      console.log(`     Enabled: ${config.enabled ? '✅' : '❌'}`);
-      console.log(`     Zone ID: ${config.cloudflare_zone_id ? '✅' : '❌'}`);
-      console.log(`     Allowed types: ${config.allowed_record_types.join(', ')}`);
-    }
-
-    // Check 4: Local domain files vs Cloudflare
-    console.log('\n4️⃣ Checking sync between local files and Cloudflare...');
-    await this.checkSync();
-
-    // Check 5: Recent deployment logs
-    console.log('\n5️⃣ Checking recent GitHub Actions...');
-    console.log('   💡 Check: https://github.com/your-repo/actions');
-    console.log('   Look for failed deploy-dns.yml workflows');
-
-    console.log('\n✅ Troubleshooting complete!');
+    
+    return issues.length === 0;
   }
 
-  async checkSync() {
+  async checkEnvironment(issues) {
+    console.log('🔧 Checking environment...');
+    
+    // Check Node.js version
+    const nodeVersion = process.version;
+    console.log(`   Node.js version: ${nodeVersion}`);
+    
+    // Check API token
+    if (!process.env.CLOUDFLARE_API_TOKEN) {
+      issues.push('CLOUDFLARE_API_TOKEN environment variable is not set');
+      console.log('   ❌ CLOUDFLARE_API_TOKEN: Not set');
+    } else {
+      console.log('   ✅ CLOUDFLARE_API_TOKEN: Set');
+    }
+    
+    // Check required directories
+    const requiredDirs = ['config', 'domains', 'requests', 'scripts'];
+    for (const dir of requiredDirs) {
+      const dirPath = path.join(__dirname, '..', dir);
+      if (!fs.existsSync(dirPath)) {
+        issues.push(`Required directory missing: ${dir}`);
+        console.log(`   ❌ Directory ${dir}: Missing`);
+      } else {
+        console.log(`   ✅ Directory ${dir}: Exists`);
+      }
+    }
+  }
+
+  checkConfiguration(issues) {
+    console.log('📋 Checking configuration files...');
+    
+    // Check schema.json
+    try {
+      const schemaPath = path.join(__dirname, '../config/schema.json');
+      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+      console.log('   ✅ schema.json: Valid');
+    } catch (error) {
+      issues.push(`Invalid schema.json: ${error.message}`);
+      console.log('   ❌ schema.json: Invalid');
+    }
+    
+    // Check domains.yml
+    try {
+      const domains = this.domainsConfig;
+      const enabledDomains = Object.keys(domains.domains).filter(d => domains.domains[d].enabled);
+      console.log(`   ✅ domains.yml: Valid (${enabledDomains.length} enabled domains)`);
+    } catch (error) {
+      issues.push(`Invalid domains.yml: ${error.message}`);
+      console.log('   ❌ domains.yml: Invalid');
+    }
+  }
+
+  async checkCloudflareAPI(issues) {
+    console.log('🌐 Checking Cloudflare API connectivity...');
+    
+    try {
+      // Test API connection with a simple request
+      const testDomain = Object.keys(this.domainsConfig.domains)[0];
+      if (testDomain) {
+        await this.cloudflare.getDNSRecords(testDomain);
+        console.log('   ✅ Cloudflare API: Connected');
+      }
+    } catch (error) {
+      issues.push(`Cloudflare API error: ${error.message}`);
+      console.log('   ❌ Cloudflare API: Failed');
+    }
+  }
+
+  async checkRecordConsistency(issues) {
+    console.log('🔍 Checking record consistency...');
+    
     const domainsDir = path.join(__dirname, '../domains');
     if (!fs.existsSync(domainsDir)) {
-      console.log('   ❌ No domains directory found');
+      console.log('   ℹ️  No domain records to check');
       return;
     }
 
-    const cloudflare = new CloudflareAPI();
-    const domains = fs.readdirSync(domainsDir);
+    let totalRecords = 0;
+    let inconsistentRecords = 0;
 
-    for (const domain of domains) {
+    for (const domain of fs.readdirSync(domainsDir)) {
       const domainDir = path.join(domainsDir, domain);
-      if (fs.statSync(domainDir).isDirectory()) {
-        console.log(`   Checking ${domain}...`);
-        
-        const files = fs.readdirSync(domainDir);
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            const subdomain = file.replace('.json', '');
-            const localData = JSON.parse(fs.readFileSync(path.join(domainDir, file), 'utf8'));
-            
+      if (!fs.statSync(domainDir).isDirectory()) continue;
+
+      for (const file of fs.readdirSync(domainDir)) {
+        if (!file.endsWith('.json')) continue;
+
+        totalRecords++;
+        const filePath = path.join(domainDir, file);
+        const subdomain = path.basename(file, '.json');
+
+        try {
+          const recordData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          
+          // Check if Cloudflare record exists
+          if (recordData.cloudflare_record_id) {
             try {
-              const cfRecords = await cloudflare.getDNSRecords(domain, subdomain);
-              if (cfRecords.length === 0) {
-                console.log(`     ❌ ${subdomain}.${domain} - Missing in Cloudflare`);
-              } else if (cfRecords[0].content !== localData.record.value) {
-                console.log(`     ⚠️  ${subdomain}.${domain} - Value mismatch`);
-                console.log(`         Local: ${localData.record.value}`);
-                console.log(`         Cloudflare: ${cfRecords[0].content}`);
-              } else {
-                console.log(`     ✅ ${subdomain}.${domain} - Synced`);
+              const cfRecords = await this.cloudflare.getDNSRecords(domain, subdomain);
+              const cfRecord = cfRecords.find(r => r.id === recordData.cloudflare_record_id);
+              
+              if (!cfRecord) {
+                inconsistentRecords++;
+                issues.push(`Local record ${subdomain}.${domain} has Cloudflare ID but record not found in Cloudflare`);
               }
             } catch (error) {
-              console.log(`     ❌ ${subdomain}.${domain} - Error: ${error.message}`);
+              console.log(`   ⚠️  Could not verify ${subdomain}.${domain}: ${error.message}`);
             }
           }
+        } catch (error) {
+          issues.push(`Invalid local record file: ${filePath}`);
         }
       }
     }
+
+    console.log(`   📊 Checked ${totalRecords} records, ${inconsistentRecords} inconsistencies found`);
   }
 
   async fixRecord(domain, subdomain) {
-    console.log(`🔧 Attempting to fix ${subdomain}.${domain}...`);
+    console.log(`🔧 Attempting to fix record: ${subdomain}.${domain}`);
     
     const filePath = path.join(__dirname, '../domains', domain, `${subdomain}.json`);
     if (!fs.existsSync(filePath)) {
       console.log('❌ Local record file not found');
-      return;
+      return false;
     }
 
-    const localData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const cloudflare = new CloudflareAPI();
-
     try {
-      // Check if record exists in Cloudflare
-      const cfRecords = await cloudflare.getDNSRecords(domain, subdomain);
+      const recordData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      
+      // Check if Cloudflare record exists
+      const cfRecords = await this.cloudflare.getDNSRecords(domain, subdomain);
       
       if (cfRecords.length === 0) {
-        console.log('📍 Record missing in Cloudflare, creating...');
-        const newRecord = await cloudflare.createDNSRecord(domain, subdomain, localData.record);
+        console.log('🔄 No Cloudflare record found, creating new one...');
+        const newRecord = await this.cloudflare.createDNSRecord(domain, subdomain, recordData.record);
         
-        // Update local file with new record ID
-        localData.cloudflare_record_id = newRecord.id;
-        localData.updated_at = new Date().toISOString();
-        fs.writeFileSync(filePath, JSON.stringify(localData, null, 2));
+        // Update local file with new ID
+        recordData.cloudflare_record_id = newRecord.id;
+        recordData.updated_at = new Date().toISOString();
+        fs.writeFileSync(filePath, JSON.stringify(recordData, null, 2));
         
-        console.log('✅ Record created and local file updated');
+        console.log('✅ Record fixed successfully');
+        return true;
       } else {
-        console.log('📍 Record exists in Cloudflare, updating...');
-        await cloudflare.updateDNSRecord(domain, subdomain, localData.record, cfRecords[0].id);
-        
-        // Update local file with correct record ID
-        localData.cloudflare_record_id = cfRecords[0].id;
-        localData.updated_at = new Date().toISOString();
-        fs.writeFileSync(filePath, JSON.stringify(localData, null, 2));
-        
-        console.log('✅ Record updated');
+        console.log('✅ Cloudflare record exists, no fix needed');
+        return true;
       }
     } catch (error) {
       console.log(`❌ Failed to fix record: ${error.message}`);
+      return false;
     }
   }
 }
@@ -149,18 +200,26 @@ module.exports = Troubleshooter;
 if (require.main === module) {
   const troubleshooter = new Troubleshooter();
   const action = process.argv[2];
-  const domain = process.argv[3];
-  const subdomain = process.argv[4];
   
   (async () => {
     try {
-      if (action === 'fix' && domain && subdomain) {
-        await troubleshooter.fixRecord(domain, subdomain);
+      if (action === 'fix') {
+        const domain = process.argv[3];
+        const subdomain = process.argv[4];
+        
+        if (!domain || !subdomain) {
+          console.error('Usage: node troubleshoot.js fix <domain> <subdomain>');
+          process.exit(1);
+        }
+        
+        const success = await troubleshooter.fixRecord(domain, subdomain);
+        process.exit(success ? 0 : 1);
       } else {
-        await troubleshooter.diagnose();
+        const success = await troubleshooter.runDiagnostics();
+        process.exit(success ? 0 : 1);
       }
     } catch (error) {
-      console.error('Troubleshooting failed:', error.message);
+      console.error('Troubleshooter error:', error.message);
       process.exit(1);
     }
   })();

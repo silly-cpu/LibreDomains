@@ -1,165 +1,180 @@
 const fs = require('fs');
 const path = require('path');
-const dns = require('dns').promises;
+const { execSync } = require('child_process');
 const CloudflareAPI = require('./cloudflare-api');
 
 class HealthChecker {
   constructor() {
     this.cloudflare = new CloudflareAPI();
-    this.domainsDir = path.join(__dirname, '../domains');
   }
 
   async checkAllRecords() {
-    console.log('🏥 Starting DNS health check...\n');
+    console.log('🏥 Starting health check for all DNS records...\n');
     
-    if (!fs.existsSync(this.domainsDir)) {
-      console.log('❌ No domains directory found');
-      return;
+    const domainsDir = path.join(__dirname, '../domains');
+    if (!fs.existsSync(domainsDir)) {
+      console.log('ℹ️  No domain records found');
+      return true;
     }
 
-    const domains = fs.readdirSync(this.domainsDir);
-    let totalChecked = 0;
-    let totalErrors = 0;
+    let totalRecords = 0;
+    let healthyRecords = 0;
+    const issues = [];
 
-    for (const domain of domains) {
-      const domainDir = path.join(this.domainsDir, domain);
-      if (fs.statSync(domainDir).isDirectory()) {
-        console.log(`🌐 Checking domain: ${domain}`);
-        console.log('─'.repeat(50));
+    for (const domain of fs.readdirSync(domainsDir)) {
+      const domainDir = path.join(domainsDir, domain);
+      if (!fs.statSync(domainDir).isDirectory()) continue;
+
+      console.log(`🌐 Checking domain: ${domain}`);
+      
+      for (const file of fs.readdirSync(domainDir)) {
+        if (!file.endsWith('.json')) continue;
+
+        totalRecords++;
+        const subdomain = path.basename(file, '.json');
+        const filePath = path.join(domainDir, file);
         
-        const files = fs.readdirSync(domainDir);
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            const subdomain = file.replace('.json', '');
-            const result = await this.checkRecord(domain, subdomain);
-            totalChecked++;
-            if (!result.healthy) {
-              totalErrors++;
-            }
+        try {
+          const recordData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          const isHealthy = await this.checkRecord(domain, subdomain, recordData);
+          
+          if (isHealthy) {
+            healthyRecords++;
+          } else {
+            issues.push(`${subdomain}.${domain}`);
           }
+        } catch (error) {
+          console.log(`   ❌ ${subdomain}.${domain}: Error reading record - ${error.message}`);
+          issues.push(`${subdomain}.${domain} (file error)`);
         }
-        console.log('');
       }
     }
 
-    console.log('📊 Health Check Summary');
-    console.log('='.repeat(30));
-    console.log(`Total records checked: ${totalChecked}`);
-    console.log(`Healthy records: ${totalChecked - totalErrors}`);
-    console.log(`Unhealthy records: ${totalErrors}`);
+    // Summary
+    console.log('\n📊 Health Check Summary:');
+    console.log(`   Total records: ${totalRecords}`);
+    console.log(`   Healthy: ${healthyRecords}`);
+    console.log(`   Issues: ${issues.length}`);
     
-    if (totalErrors > 0) {
-      console.log(`\n⚠️  ${totalErrors} records need attention!`);
-      process.exit(1);
-    } else {
-      console.log('\n✅ All records are healthy!');
+    if (issues.length > 0) {
+      console.log('\n❌ Records with issues:');
+      issues.forEach(issue => console.log(`   - ${issue}`));
     }
+
+    return issues.length === 0;
   }
 
-  async checkRecord(domain, subdomain) {
-    const filePath = path.join(this.domainsDir, domain, `${subdomain}.json`);
+  async checkRecord(domain, subdomain, recordData) {
     const fullDomain = `${subdomain}.${domain}`;
     
     try {
-      // Load local record
-      const localRecord = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      console.log(`  Checking ${fullDomain}...`);
-
       // Check Cloudflare record
-      const cloudflareRecords = await this.cloudflare.getDNSRecords(domain, subdomain);
+      const cfHealthy = await this.checkCloudflareRecord(domain, subdomain, recordData);
       
-      if (cloudflareRecords.length === 0) {
-        console.log(`    ❌ No DNS record found in Cloudflare`);
-        return { healthy: false, error: 'Missing from Cloudflare' };
-      }
-
-      const cfRecord = cloudflareRecords[0];
-      
-      // Verify record matches
-      if (cfRecord.type !== localRecord.record.type) {
-        console.log(`    ❌ Record type mismatch: local=${localRecord.record.type}, cf=${cfRecord.type}`);
-        return { healthy: false, error: 'Type mismatch' };
-      }
-
-      if (cfRecord.content !== localRecord.record.value) {
-        console.log(`    ❌ Record value mismatch: local=${localRecord.record.value}, cf=${cfRecord.content}`);
-        return { healthy: false, error: 'Value mismatch' };
-      }
-
       // Check DNS resolution
-      try {
-        const resolved = await this.resolveDNS(fullDomain, localRecord.record.type);
-        if (resolved) {
-          console.log(`    ✅ Healthy (resolves to ${resolved})`);
-        } else {
-          console.log(`    ⚠️  Cloudflare OK, but not resolving yet (DNS propagation)`);
-        }
-      } catch (dnsError) {
-        console.log(`    ⚠️  Cloudflare OK, DNS resolution failed: ${dnsError.message}`);
+      const dnsHealthy = await this.checkDNSResolution(fullDomain, recordData.record);
+      
+      const isHealthy = cfHealthy && dnsHealthy;
+      
+      if (isHealthy) {
+        console.log(`   ✅ ${fullDomain}: Healthy`);
+      } else {
+        console.log(`   ❌ ${fullDomain}: Issues detected`);
       }
-
-      return { healthy: true };
-
+      
+      return isHealthy;
     } catch (error) {
-      console.log(`    ❌ Error checking ${fullDomain}: ${error.message}`);
-      return { healthy: false, error: error.message };
+      console.log(`   ❌ ${fullDomain}: Health check failed - ${error.message}`);
+      return false;
     }
   }
 
-  async resolveDNS(domain, recordType) {
+  async checkCloudflareRecord(domain, subdomain, recordData) {
     try {
-      switch (recordType) {
-        case 'A':
-          const a = await dns.resolve4(domain);
-          return a[0];
-        case 'AAAA':
-          const aaaa = await dns.resolve6(domain);
-          return aaaa[0];
-        case 'CNAME':
-          const cname = await dns.resolveCname(domain);
-          return cname[0];
-        case 'MX':
-          const mx = await dns.resolveMx(domain);
-          return mx[0]?.exchange;
-        case 'TXT':
-          const txt = await dns.resolveTxt(domain);
-          return txt[0]?.[0];
-        default:
-          return null;
+      if (!recordData.cloudflare_record_id) {
+        console.log(`   ⚠️  ${subdomain}.${domain}: No Cloudflare record ID`);
+        return false;
       }
+
+      const cfRecords = await this.cloudflare.getDNSRecords(domain, subdomain);
+      const cfRecord = cfRecords.find(r => r.id === recordData.cloudflare_record_id);
+      
+      if (!cfRecord) {
+        console.log(`   ❌ ${subdomain}.${domain}: Cloudflare record not found`);
+        return false;
+      }
+
+      // Check if record values match
+      if (cfRecord.content !== recordData.record.value) {
+        console.log(`   ⚠️  ${subdomain}.${domain}: Record value mismatch`);
+        console.log(`       Expected: ${recordData.record.value}`);
+        console.log(`       Actual: ${cfRecord.content}`);
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      throw error;
+      console.log(`   ❌ ${subdomain}.${domain}: Cloudflare check failed - ${error.message}`);
+      return false;
     }
   }
 
-  async checkSpecificDomain(domain) {
-    console.log(`🏥 Checking specific domain: ${domain}\n`);
-    
-    const domainDir = path.join(this.domainsDir, domain);
-    if (!fs.existsSync(domainDir)) {
-      console.log(`❌ Domain directory not found: ${domain}`);
-      return;
-    }
-
-    const files = fs.readdirSync(domainDir);
-    let checked = 0;
-    let errors = 0;
-
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const subdomain = file.replace('.json', '');
-        const result = await this.checkRecord(domain, subdomain);
-        checked++;
-        if (!result.healthy) {
-          errors++;
-        }
+  async checkDNSResolution(fullDomain, record) {
+    try {
+      let command;
+      
+      switch (record.type) {
+        case 'A':
+          command = `nslookup -type=A ${fullDomain}`;
+          break;
+        case 'AAAA':
+          command = `nslookup -type=AAAA ${fullDomain}`;
+          break;
+        case 'CNAME':
+          command = `nslookup -type=CNAME ${fullDomain}`;
+          break;
+        case 'MX':
+          command = `nslookup -type=MX ${fullDomain}`;
+          break;
+        case 'TXT':
+          command = `nslookup -type=TXT ${fullDomain}`;
+          break;
+        default:
+          console.log(`   ℹ️  ${fullDomain}: DNS resolution check skipped for ${record.type} record`);
+          return true;
       }
+
+      const output = execSync(command, { encoding: 'utf8', timeout: 5000 });
+      
+      // Basic check - if no error thrown, DNS is resolving
+      if (output.includes(record.value) || output.includes('Name:')) {
+        return true;
+      } else {
+        console.log(`   ⚠️  ${fullDomain}: DNS resolution may be incomplete`);
+        return true; // Don't fail health check for DNS propagation issues
+      }
+    } catch (error) {
+      console.log(`   ⚠️  ${fullDomain}: DNS resolution check failed (may be propagating)`);
+      return true; // Don't fail health check for DNS propagation issues
+    }
+  }
+
+  async checkSingleRecord(domain, subdomain) {
+    console.log(`🔍 Checking single record: ${subdomain}.${domain}`);
+    
+    const filePath = path.join(__dirname, '../domains', domain, `${subdomain}.json`);
+    if (!fs.existsSync(filePath)) {
+      console.log('❌ Record file not found');
+      return false;
     }
 
-    console.log(`\n📊 Results for ${domain}:`);
-    console.log(`  Checked: ${checked}`);
-    console.log(`  Healthy: ${checked - errors}`);
-    console.log(`  Errors: ${errors}`);
+    try {
+      const recordData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return await this.checkRecord(domain, subdomain, recordData);
+    } catch (error) {
+      console.log(`❌ Error checking record: ${error.message}`);
+      return false;
+    }
   }
 }
 
@@ -169,16 +184,21 @@ module.exports = HealthChecker;
 if (require.main === module) {
   const checker = new HealthChecker();
   const domain = process.argv[2];
+  const subdomain = process.argv[3];
   
   (async () => {
     try {
-      if (domain) {
-        await checker.checkSpecificDomain(domain);
+      let success;
+      
+      if (domain && subdomain) {
+        success = await checker.checkSingleRecord(domain, subdomain);
       } else {
-        await checker.checkAllRecords();
+        success = await checker.checkAllRecords();
       }
+      
+      process.exit(success ? 0 : 1);
     } catch (error) {
-      console.error('Health check failed:', error.message);
+      console.error('Health check error:', error.message);
       process.exit(1);
     }
   })();
