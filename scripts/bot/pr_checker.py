@@ -93,17 +93,90 @@ def format_validation_result(results: Dict[str, List[str]]) -> str:
     
     return "\n".join(markdown)
 
+def format_validation_result_console(results: Dict[str, List[str]]) -> str:
+    """
+    格式化验证结果为控制台输出格式
+    
+    Args:
+        results: 验证结果字典 {文件路径: 错误信息列表}
+    
+    Returns:
+        控制台格式的验证结果
+    """
+    output = []
+    
+    # 统计信息
+    total_files = len(results)
+    error_files = sum(1 for errors in results.values() if errors)
+    success_files = total_files - error_files
+    
+    output.append("=" * 60)
+    output.append("🤖 域名配置验证结果")
+    output.append("=" * 60)
+    
+    if error_files == 0:
+        output.append("✅ 验证通过")
+        output.append(f"所有 {total_files} 个文件验证通过，没有发现问题。")
+    else:
+        output.append("❌ 验证失败")
+        output.append(f"共 {total_files} 个文件，其中 {error_files} 个文件有问题，{success_files} 个文件正常。")
+    
+    output.append("")
+    
+    # 详细结果
+    for file_path, errors in results.items():
+        if errors:
+            output.append(f"❌ {file_path}")
+            output.append("-" * 40)
+            for i, error in enumerate(errors, 1):
+                # 将多行错误信息格式化
+                if '\n' in error:
+                    lines = error.split('\n')
+                    output.append(f"错误 {i}: {lines[0]}")
+                    for line in lines[1:]:
+                        if line.strip():
+                            output.append(f"  - {line.strip()}")
+                else:
+                    output.append(f"错误 {i}: {error}")
+            output.append("")
+        else:
+            output.append(f"✅ {file_path}")
+            output.append("验证通过，没有发现问题。")
+            output.append("")
+    
+    # 添加帮助提示
+    if error_files > 0:
+        output.append("=" * 60)
+        output.append("💡 常见问题解决方法")
+        output.append("=" * 60)
+        output.append("")
+        output.append("JSON 格式错误:")
+        output.append("- 缺少逗号: 确保 JSON 对象中的字段用逗号分隔")
+        output.append("- 缺少冒号: 确保键值对用冒号分隔")
+        output.append("- 引号不匹配: 确保所有字符串用双引号包围")
+        output.append("- 多余逗号: 删除最后一个字段后的多余逗号")
+        output.append("")
+        output.append("推荐工具:")
+        output.append("- 使用 JSONLint (https://jsonlint.com/) 验证 JSON 格式")
+        output.append("- 使用支持 JSON 语法高亮的编辑器（如 VS Code）")
+        output.append("")
+        output.append("如需帮助，请查看用户指南:")
+        output.append("https://github.com/bestzwei/LibreDomains/blob/main/docs/user-guide.md")
+    
+    return "\n".join(output)
 
-def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None) -> Tuple[bool, str]:
+
+def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None, console_output: bool = False) -> Tuple[bool, str]:
     """
     检查 Pull Request 中的文件
     
     Args:
         pr_files: Pull Request 中的文件路径列表
         config: 项目配置信息 (可选)
+        console_output: 是否输出控制台格式 (默认为 Markdown 格式)
     
     Returns:
-        (是否所有文件有效, Markdown 格式的验证结果)
+        (是否所有文件有效, 格式化的验证结果)
     """
     # 规范化文件路径
     normalized_files = []
@@ -154,9 +227,12 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None)
             all_valid = False
         
         # 格式化结果
-        markdown = format_validation_result(results)
+        if console_output:
+            formatted_result = format_validation_result_console(results)
+        else:
+            formatted_result = format_validation_result(results)
         
-        return all_valid, markdown
+        return all_valid, formatted_result
     except Exception as e:
         import traceback
         error_msg = f"验证过程中发生错误: {str(e)}"
@@ -171,7 +247,10 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None)
         print(f"- 脚本路径: {__file__}", file=sys.stderr)
         print(f"- 项目根目录: {project_root}", file=sys.stderr)
         
-        return False, f"## ❌ 验证失败\n\n{error_msg}\n\n详细错误信息请查看 Actions 日志。"
+        if console_output:
+            return False, f"验证失败\n\n{error_msg}\n\n详细错误信息请查看 Actions 日志。"
+        else:
+            return False, f"## ❌ 验证失败\n\n{error_msg}\n\n详细错误信息请查看 Actions 日志。"
 
 
 def main():
@@ -183,6 +262,7 @@ def main():
     parser.add_argument('--files', nargs='+', required=True, help='要检查的文件路径')
     parser.add_argument('--output', help='输出文件路径')
     parser.add_argument('--debug', action='store_true', help='启用调试模式')
+    parser.add_argument('--console', action='store_true', help='输出控制台格式（默认为 Markdown 格式）')
     
     args = parser.parse_args()
     
@@ -204,8 +284,9 @@ def main():
             except Exception as e:
                 print(f"警告: 无法加载默认配置文件: {e}", file=sys.stderr)
         
-        # 检查文件
-        all_valid, markdown = check_pr_files(args.files, config)
+        # 检查文件，如果没有指定输出文件且没有启用控制台模式，则自动启用控制台模式
+        console_mode = args.console or not args.output
+        all_valid, result = check_pr_files(args.files, config, console_output=console_mode)
         
         # 输出结果
         if args.output:
@@ -213,10 +294,10 @@ def main():
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
             with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(markdown)
+                f.write(result)
             print(f"结果已保存到: {args.output}", file=sys.stderr)
         else:
-            print(markdown)
+            print(result)
         
         return 0 if all_valid else 1
     except Exception as e:
@@ -232,7 +313,10 @@ def main():
                 if output_dir:
                     os.makedirs(output_dir, exist_ok=True)
                 with open(args.output, 'w', encoding='utf-8') as f:
-                    f.write(f"## ❌ 执行失败\n\n{error_msg}\n\n```\n{traceback_info}\n```")
+                    if args.console:
+                        f.write(f"执行失败\n\n{error_msg}\n\n{traceback_info}")
+                    else:
+                        f.write(f"## ❌ 执行失败\n\n{error_msg}\n\n```\n{traceback_info}\n```")
             except Exception as output_error:
                 print(f"无法写入输出文件: {output_error}", file=sys.stderr)
         return 1

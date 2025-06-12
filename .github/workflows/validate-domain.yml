@@ -11,19 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
-      # 添加更多权限确保能够访问所有必要的资源
       actions: read
-      checks: read
-      statuses: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # 使用 GitHub Token 确保有足够权限
-          token: ${{ secrets.GITHUB_TOKEN }}
         
       - name: 设置 Python
         uses: actions/setup-python@v5
@@ -40,28 +33,24 @@ jobs:
         with:
           files: 'domains/**/*.json'
           separator: ' '
-          # 使用 GitHub Token
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: 验证域名配置
-        id: validate
         if: steps.changed-files.outputs.all_changed_files != ''
         run: |
-          mkdir -p /tmp/validation
-          python scripts/bot/pr_checker.py --files ${{ steps.changed-files.outputs.all_changed_files }} --output /tmp/validation/result.md
-          echo "status=$?" >> $GITHUB_OUTPUT
+          echo "=== 开始验证域名配置 ==="
+          echo "更改的文件: ${{ steps.changed-files.outputs.all_changed_files }}"
+          echo ""
           
-      - name: 发表评论
-        uses: peter-evans/create-or-update-comment@v4
-        if: steps.changed-files.outputs.all_changed_files != ''
-        with:
-          issue-number: ${{ github.event.number }}
-          body-path: /tmp/validation/result.md
-            
-      - name: 验证结果
-        if: steps.changed-files.outputs.all_changed_files != ''
-        run: |
-          if [ "${{ steps.validate.outputs.status }}" != "0" ]; then
-            echo "域名配置验证失败，请查看PR评论了解详情。"
+          # 运行验证脚本并直接输出到控制台
+          if python scripts/bot/pr_checker.py --files ${{ steps.changed-files.outputs.all_changed_files }} --debug; then
+            echo ""
+            echo "🎉 所有域名配置验证通过！"
+          else
+            echo ""
+            echo "❌ 域名配置验证失败，请查看上方的详细错误信息。"
             exit 1
-          fi
+      
+      - name: 无文件更改
+        if: steps.changed-files.outputs.all_changed_files == ''
+        run: |
+          echo "ℹ️ 没有检测到域名配置文件的更改。"
