@@ -15,7 +15,7 @@ import argparse
 import requests
 from typing import Dict, List, Any, Optional, Tuple
 
-# 添加项目根目录到 Python 跻
+# 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from scripts.utils.common import load_json_file

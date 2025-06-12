@@ -13,9 +13,18 @@ import sys
 from typing import Dict, List, Any, Optional, Tuple
 
 # 添加项目根目录到 Python 路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '../..'))
+sys.path.insert(0, project_root)
 
-from scripts.validation.domain_validator import validate_pull_request, load_config
+try:
+    from scripts.validation.domain_validator import validate_pull_request, load_config
+except ImportError as e:
+    print(f"导入错误: {e}", file=sys.stderr)
+    print(f"当前目录: {current_dir}", file=sys.stderr)
+    print(f"项目根目录: {project_root}", file=sys.stderr)
+    print(f"Python 路径: {sys.path[:3]}", file=sys.stderr)
+    sys.exit(1)
 
 
 def format_validation_result(results: Dict[str, List[str]]) -> str:
@@ -96,21 +105,53 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None)
     Returns:
         (是否所有文件有效, Markdown 格式的验证结果)
     """
-    # 过滤出实际存在的文件
-    existing_files = [f for f in pr_files if os.path.exists(f)]
-    missing_files = [f for f in pr_files if not os.path.exists(f)]
+    # 规范化文件路径
+    normalized_files = []
+    missing_files = []
     
-    # 如果有文件不存在，添加到错误信息中
-    if missing_files:
-        print(f"警告: 以下文件不存在: {', '.join(missing_files)}", file=sys.stderr)
+    for file_path in pr_files:
+        # 支持相对路径和绝对路径
+        if not os.path.isabs(file_path):
+            # 相对路径，从项目根目录开始
+            abs_path = os.path.join(project_root, file_path)
+        else:
+            abs_path = file_path
+        
+        # 检查文件是否存在
+        if os.path.exists(abs_path):
+            normalized_files.append(abs_path)
+        else:
+            # 尝试相对于当前工作目录
+            if os.path.exists(file_path):
+                normalized_files.append(os.path.abspath(file_path))
+            else:
+                missing_files.append(file_path)
+                print(f"警告: 文件不存在: {file_path} (尝试路径: {abs_path})", file=sys.stderr)
     
-    # 如果没有文件需要验证
-    if not existing_files:
-        return False, "没有找到需要验证的文件。"
+    # 调试信息
+    print(f"项目根目录: {project_root}", file=sys.stderr)
+    print(f"当前工作目录: {os.getcwd()}", file=sys.stderr)
+    print(f"原始文件列表: {pr_files}", file=sys.stderr)
+    print(f"规范化文件列表: {normalized_files}", file=sys.stderr)
+    print(f"缺失文件列表: {missing_files}", file=sys.stderr)
+    
+    # 如果没有找到任何文件
+    if not normalized_files:
+        error_msg = "没有找到需要验证的文件。\n\n"
+        if missing_files:
+            error_msg += "缺失的文件:\n"
+            for file_path in missing_files:
+                error_msg += f"- {file_path}\n"
+        return False, f"## ❌ 验证失败\n\n{error_msg}"
     
     try:
         # 验证文件
-        all_valid, results = validate_pull_request(existing_files, config)
+        all_valid, results = validate_pull_request(normalized_files, config)
+        
+        # 如果有缺失文件，添加到结果中
+        for file_path in missing_files:
+            results[file_path] = [f"文件不存在: {file_path}"]
+            all_valid = False
         
         # 格式化结果
         markdown = format_validation_result(results)
@@ -122,6 +163,14 @@ def check_pr_files(pr_files: List[str], config: Optional[Dict[str, Any]] = None)
         # 添加详细的错误追踪信息
         traceback_info = traceback.format_exc()
         print(f"详细错误信息:\n{traceback_info}", file=sys.stderr)
+        
+        # 添加环境调试信息
+        print(f"环境调试信息:", file=sys.stderr)
+        print(f"- Python 版本: {sys.version}", file=sys.stderr)
+        print(f"- 当前目录: {os.getcwd()}", file=sys.stderr)
+        print(f"- 脚本路径: {__file__}", file=sys.stderr)
+        print(f"- 项目根目录: {project_root}", file=sys.stderr)
+        
         return False, f"## ❌ 验证失败\n\n{error_msg}\n\n详细错误信息请查看 Actions 日志。"
 
 
@@ -133,35 +182,59 @@ def main():
     parser.add_argument('--config', help='配置文件路径')
     parser.add_argument('--files', nargs='+', required=True, help='要检查的文件路径')
     parser.add_argument('--output', help='输出文件路径')
+    parser.add_argument('--debug', action='store_true', help='启用调试模式')
     
     args = parser.parse_args()
     
+    # 启用调试模式
+    if args.debug:
+        print("=== 调试模式启用 ===", file=sys.stderr)
+        print(f"命令行参数: {args}", file=sys.stderr)
+        print(f"当前工作目录: {os.getcwd()}", file=sys.stderr)
+        print(f"项目根目录: {project_root}", file=sys.stderr)
+    
     try:
         # 加载项目配置
-        config = load_config(args.config) if args.config else None
+        config = None
+        if args.config:
+            config = load_config(args.config)
+        else:
+            try:
+                config = load_config()
+            except Exception as e:
+                print(f"警告: 无法加载默认配置文件: {e}", file=sys.stderr)
         
         # 检查文件
         all_valid, markdown = check_pr_files(args.files, config)
         
         # 输出结果
         if args.output:
-            os.makedirs(os.path.dirname(args.output), exist_ok=True)
+            output_dir = os.path.dirname(args.output)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(markdown)
+            print(f"结果已保存到: {args.output}", file=sys.stderr)
         else:
             print(markdown)
         
         return 0 if all_valid else 1
     except Exception as e:
+        import traceback
         error_msg = f"程序执行失败: {str(e)}"
+        traceback_info = traceback.format_exc()
         print(error_msg, file=sys.stderr)
+        print(f"详细错误信息:\n{traceback_info}", file=sys.stderr)
+        
         if args.output:
             try:
-                os.makedirs(os.path.dirname(args.output), exist_ok=True)
+                output_dir = os.path.dirname(args.output)
+                if output_dir:
+                    os.makedirs(output_dir, exist_ok=True)
                 with open(args.output, 'w', encoding='utf-8') as f:
-                    f.write(f"## ❌ 执行失败\n\n{error_msg}")
-            except:
-                pass
+                    f.write(f"## ❌ 执行失败\n\n{error_msg}\n\n```\n{traceback_info}\n```")
+            except Exception as output_error:
+                print(f"无法写入输出文件: {output_error}", file=sys.stderr)
         return 1
 
 
