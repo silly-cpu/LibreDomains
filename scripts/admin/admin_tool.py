@@ -255,9 +255,10 @@ def update_domain(args):
     """更新域名配置"""
     admin = AdminTool(args.config)
     
+    # 修复：正确映射参数名称
     success = admin.update_domain(
         name=args.name,
-        zone_id=args.zone_id,
+        zone_id=getattr(args, 'zone_id', None),  # 修复：使用正确的属性名
         description=args.description,
         enabled=args.enabled
     )

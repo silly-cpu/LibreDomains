@@ -63,7 +63,8 @@ jobs:
       - name: 部署域名配置
         if: steps.deploy-files.outputs.files != ''
         env:
-          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          # 修复：使用正确的环境变量名，与 cloudflare_manager.py 保持一致
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
         run: |
           for file in ${{ steps.deploy-files.outputs.files }}; do
@@ -80,10 +81,10 @@ jobs:
             
             echo "域名: $DOMAIN, 子域名: $SUBDOMAIN"
             
-            # 部署 DNS 配置
+            # 修复：使用正确的参数名
             python scripts/cloudflare/cloudflare_manager.py \
-              --api-key "$CLOUDFLARE_API_KEY" \
-              --email "$CLOUDFLARE_EMAIL" \
+              --api-key "$CLOUDFLARE_API_TOKEN" \
+              $( [ -n "$CLOUDFLARE_EMAIL" ] && echo "--email $CLOUDFLARE_EMAIL" ) \
               --domain "$DOMAIN" \
               --subdomain "$SUBDOMAIN" \
               --json-file "$file" \

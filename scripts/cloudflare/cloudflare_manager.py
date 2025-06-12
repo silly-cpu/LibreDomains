@@ -266,14 +266,24 @@ class CloudflareManager:
         """
         zone_id = self.get_zone_id(domain)
         
-        # 构建完整的记录名称
+        # 修复：构建完整的记录名称逻辑
         if subdomain == '@':
             full_name = domain
         else:
             full_name = f"{subdomain}.{domain}"
         
-        # 获取现有记录
-        existing_records = self.list_dns_records(zone_id, name=full_name)
+        # 获取现有记录 - 修复：应该获取所有相关记录，不只是精确匹配
+        existing_records = []
+        for record in records:
+            name = record['name']
+            if name == '@':
+                record_name = full_name
+            else:
+                record_name = f"{name}.{full_name}" if subdomain != '@' else f"{name}.{domain}"
+            
+            # 获取该记录名称的现有记录
+            existing_for_name = self.list_dns_records(zone_id, name=record_name)
+            existing_records.extend(existing_for_name)
         
         # 创建记录映射
         existing_map = {}
@@ -296,11 +306,11 @@ class CloudflareManager:
             record_type = record['type']
             name = record['name']
             
-            # 构建记录名称
+            # 修复：构建记录名称逻辑
             if name == '@':
-                record_name = domain
+                record_name = full_name
             else:
-                record_name = f"{name}.{subdomain}.{domain}" if subdomain != '@' else f"{name}.{domain}"
+                record_name = f"{name}.{full_name}" if subdomain != '@' else f"{name}.{domain}"
             
             key = f"{record_type}:{record_name}"
             new_map[key] = record

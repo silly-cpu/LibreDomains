@@ -21,7 +21,7 @@
 
 #### 1. Fork 仓库
 
-1. 访问 [LibreDomains 仓库](https://github.com/your-org/LibreDomains)
+1. 访问 [LibreDomains 仓库](https://github.com/bestzwei/LibreDomains)
 2. 点击右上角的 "Fork" 按钮
 3. 等待仓库克隆到您的 GitHub 账户
 

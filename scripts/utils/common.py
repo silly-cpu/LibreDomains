@@ -94,9 +94,9 @@ def is_valid_subdomain(subdomain: str) -> bool:
     if subdomain == '@':
         return True
     
-    # 子域名由字母、数字和连字符组成，不能以连字符开头或结尾
+    # 修复：与 domain_validator.py 保持一致，并确保小写
     pattern = r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
-    return bool(re.match(pattern, subdomain))
+    return bool(re.match(pattern, subdomain.lower()))
 
 
 def is_valid_ip(ip: str) -> bool:

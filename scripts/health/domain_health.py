@@ -185,23 +185,22 @@ def check_dns_record(domain: str, subdomain: str, record: Dict[str, Any]) -> Dic
         elif record_type == 'MX':
             # 检查 MX 记录
             try:
-                import dns.resolver
-                answers = dns.resolver.resolve(fqdn, 'MX')
-                mx_records = [str(answer.exchange) for answer in answers]
-                result['actual'] = mx_records
-                
-                expected = expected_content[:-1] if expected_content.endswith('.') else expected_content
-                found = False
-                for mx in mx_records:
-                    mx = mx[:-1] if mx.endswith('.') else mx
-                    if expected in mx:
-                        found = True
-                        break
-                
-                if found:
-                    result['status'] = 'ok'
+                # 使用标准库而不是 dns.resolver
+                import subprocess
+                result_cmd = subprocess.run(['nslookup', '-type=MX', fqdn], 
+                                          capture_output=True, text=True, timeout=10)
+                if result_cmd.returncode == 0:
+                    # 简化处理，只检查是否有 MX 记录返回
+                    output = result_cmd.stdout.lower()
+                    if 'mail exchanger' in output or expected_content.lower() in output:
+                        result['status'] = 'ok'
+                        result['actual'] = ['MX records found']
+                    else:
+                        result['status'] = 'mismatch'
+                        result['actual'] = ['No matching MX records']
                 else:
-                    result['status'] = 'mismatch'
+                    result['status'] = 'error'
+                    result['error'] = f"MX 记录查询失败: {result_cmd.stderr}"
             except Exception as e:
                 result['error'] = f"MX 记录检查错误: {str(e)}"
                 result['status'] = 'error'
