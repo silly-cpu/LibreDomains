@@ -255,10 +255,22 @@ def validate_pull_request(pr_files: List[str], config: Optional[Dict[str, Any]] 
     
     # 加载项目配置
     if config is None:
-        config = load_config()
+        try:
+            config = load_config()
+        except Exception as e:
+            # 如果配置加载失败，为所有文件返回错误
+            for file_path in pr_files:
+                results[file_path] = [f"无法加载项目配置: {str(e)}"]
+            return False, results
     
     # 检查每个文件
     for file_path in pr_files:
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            results[file_path] = [f"文件不存在: {file_path}"]
+            all_valid = False
+            continue
+            
         # 检查文件是否在域名目录下
         if '/domains/' not in file_path:
             results[file_path] = ["文件必须位于 domains/ 目录下"]
@@ -266,9 +278,14 @@ def validate_pull_request(pr_files: List[str], config: Optional[Dict[str, Any]] 
             continue
         
         # 提取主域名和子域名
-        parts = file_path.split('/domains/')[1].split('/')
-        if len(parts) != 2:
-            results[file_path] = ["无效的文件路径，应为 domains/domain/subdomain.json"]
+        try:
+            parts = file_path.split('/domains/')[1].split('/')
+            if len(parts) != 2:
+                results[file_path] = ["无效的文件路径，应为 domains/domain/subdomain.json"]
+                all_valid = False
+                continue
+        except IndexError:
+            results[file_path] = ["无效的文件路径格式"]
             all_valid = False
             continue
         
@@ -307,21 +324,31 @@ def validate_pull_request(pr_files: List[str], config: Optional[Dict[str, Any]] 
             continue
         
         # 验证配置文件内容
-        valid, errors = validate_domain_config(file_path, config)
-        if not valid:
-            results[file_path] = errors
+        try:
+            valid, errors = validate_domain_config(file_path, config)
+            if not valid:
+                results[file_path] = errors
+                all_valid = False
+                continue
+        except Exception as e:
+            results[file_path] = [f"验证配置文件时出错: {str(e)}"]
             all_valid = False
             continue
         
-        # 检查子域名是否可用
-        domains_dir = os.path.dirname(os.path.dirname(file_path))
-        if not is_domain_available(domain, subdomain, domains_dir):
-            results[file_path] = [f"子域名 '{subdomain}' 已被占用"]
-            all_valid = False
-            continue
+        # 检查子域名是否可用 (仅当文件不是现有文件时)
+        try:
+            domains_dir = os.path.dirname(os.path.dirname(file_path))
+            if not is_domain_available(domain, subdomain, domains_dir):
+                results[file_path] = [f"子域名 '{subdomain}' 已被占用"]
+                all_valid = False
+                continue
+        except Exception as e:
+            # 子域名可用性检查失败时，记录警告但不阻止验证
+            results[file_path] = [f"警告: 无法检查子域名可用性: {str(e)}"]
         
         # 如果没有错误，添加一个空列表
-        results[file_path] = []
+        if file_path not in results:
+            results[file_path] = []
     
     return all_valid, results
 
