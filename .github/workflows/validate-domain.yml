@@ -10,7 +10,9 @@ jobs:
   validate-domain:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
+      issues: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
