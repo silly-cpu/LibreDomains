@@ -28,7 +28,20 @@ def load_json_file(file_path: str) -> Tuple[Optional[Dict[str, Any]], Optional[s
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f), None
     except json.JSONDecodeError as e:
-        return None, f"JSON 格式错误: {str(e)}"
+        # 提供更详细的JSON格式错误信息
+        error_msg = f"JSON 格式错误: {str(e)}"
+        if hasattr(e, 'lineno') and hasattr(e, 'colno'):
+            error_msg += f"\n位置: 第 {e.lineno} 行, 第 {e.colno} 列"
+        if hasattr(e, 'msg'):
+            if "Expecting ',' delimiter" in e.msg:
+                error_msg += "\n提示: 可能缺少逗号分隔符，请检查 JSON 对象中的字段是否用逗号正确分隔"
+            elif "Expecting ':' delimiter" in e.msg:
+                error_msg += "\n提示: 可能缺少冒号，请检查键值对格式是否正确"
+            elif "Expecting value" in e.msg:
+                error_msg += "\n提示: 可能有多余的逗号或缺少值"
+            elif "Unterminated string" in e.msg:
+                error_msg += "\n提示: 字符串未正确闭合，请检查引号是否匹配"
+        return None, error_msg
     except FileNotFoundError:
         return None, f"文件不存在: {file_path}"
     except Exception as e:

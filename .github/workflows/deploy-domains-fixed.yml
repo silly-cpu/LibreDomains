@@ -18,6 +18,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -63,12 +66,22 @@ jobs:
       - name: 部署域名配置
         if: steps.deploy-files.outputs.files != ''
         env:
-          # 修复：使用正确的环境变量名，与 cloudflare_manager.py 保持一致
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
         run: |
+          # 检查必需的环境变量
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "❌ 错误: CLOUDFLARE_API_TOKEN 环境变量未设置"
+            echo "请在 GitHub 仓库的 Settings > Secrets and variables > Actions 中添加 CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+          
+          echo "✅ Cloudflare API Token 已配置 (长度: ${#CLOUDFLARE_API_TOKEN})"
+          
+          # 处理每个文件
           for file in ${{ steps.deploy-files.outputs.files }}; do
             echo "处理文件: $file"
+            
             # 提取域名和子域名
             DOMAIN=$(echo $file | cut -d'/' -f2)
             SUBDOMAIN=$(basename $file .json)
@@ -81,12 +94,41 @@ jobs:
             
             echo "域名: $DOMAIN, 子域名: $SUBDOMAIN"
             
-            # 修复：使用正确的参数名
-            python scripts/cloudflare/cloudflare_manager.py \
+            # 首先运行调试模式验证权限
+            echo "=== 验证 API Token 权限 ==="
+            if ! python scripts/cloudflare/cloudflare_manager.py \
+              --api-key "$CLOUDFLARE_API_TOKEN" \
+              $( [ -n "$CLOUDFLARE_EMAIL" ] && echo "--email $CLOUDFLARE_EMAIL" ) \
+              --domain "$DOMAIN" \
+              --subdomain "$SUBDOMAIN" \
+              --action debug \
+              --debug; then
+              echo "❌ API Token 权限验证失败"
+              echo "请检查:"
+              echo "1. API Token 是否有效"
+              echo "2. API Token 是否有 Zone:Read 和 DNS:Edit 权限"
+              echo "3. API Token 是否能访问域名 $DOMAIN 的 Zone"
+              exit 1
+            fi
+            
+            echo "=== 开始同步 DNS 记录 ==="
+            # 然后运行实际同步
+            if ! python scripts/cloudflare/cloudflare_manager.py \
               --api-key "$CLOUDFLARE_API_TOKEN" \
               $( [ -n "$CLOUDFLARE_EMAIL" ] && echo "--email $CLOUDFLARE_EMAIL" ) \
               --domain "$DOMAIN" \
               --subdomain "$SUBDOMAIN" \
               --json-file "$file" \
-              --action sync
+              --action sync \
+              --debug; then
+              echo "❌ DNS 记录同步失败: $file"
+              echo "请查看上方的详细错误信息"
+              exit 1
+            else
+              echo "✅ DNS 记录同步成功: $file"
+            fi
+            
+            echo "---"
           done
+          
+          echo "🎉 所有域名配置部署完成!"
