@@ -29,22 +29,58 @@ def format_validation_result(results: Dict[str, List[str]]) -> str:
         Markdown 格式的验证结果
     """
     markdown = []
+    markdown.append("# 🤖 域名配置验证结果\n")
     
+    # 统计信息
+    total_files = len(results)
+    error_files = sum(1 for errors in results.values() if errors)
+    success_files = total_files - error_files
+    
+    if error_files == 0:
+        markdown.append("## ✅ 验证通过")
+        markdown.append(f"所有 {total_files} 个文件验证通过，没有发现问题。\n")
+    else:
+        markdown.append("## ❌ 验证失败")
+        markdown.append(f"共 {total_files} 个文件，其中 {error_files} 个文件有问题，{success_files} 个文件正常。\n")
+    
+    # 详细结果
     for file_path, errors in results.items():
         if errors:
-            markdown.append(f"### ❌ {file_path}")
+            markdown.append(f"### ❌ `{file_path}`")
             markdown.append("")
-            for error in errors:
-                markdown.append(f"- {error}")
+            for i, error in enumerate(errors, 1):
+                # 将多行错误信息格式化
+                if '\n' in error:
+                    lines = error.split('\n')
+                    markdown.append(f"**错误 {i}:** {lines[0]}")
+                    for line in lines[1:]:
+                        if line.strip():
+                            markdown.append(f"  - {line.strip()}")
+                else:
+                    markdown.append(f"**错误 {i}:** {error}")
             markdown.append("")
         else:
-            markdown.append(f"### ✅ {file_path}")
+            markdown.append(f"### ✅ `{file_path}`")
             markdown.append("")
             markdown.append("验证通过，没有发现问题。")
             markdown.append("")
     
-    if not markdown:
-        return "所有文件验证通过，没有发现问题。"
+    # 添加帮助提示
+    if error_files > 0:
+        markdown.append("---")
+        markdown.append("## 💡 常见问题解决方法")
+        markdown.append("")
+        markdown.append("### JSON 格式错误")
+        markdown.append("- **缺少逗号**: 确保 JSON 对象中的字段用逗号分隔")
+        markdown.append("- **缺少冒号**: 确保键值对用冒号分隔")
+        markdown.append("- **引号不匹配**: 确保所有字符串用双引号包围")
+        markdown.append("- **多余逗号**: 删除最后一个字段后的多余逗号")
+        markdown.append("")
+        markdown.append("### 推荐工具")
+        markdown.append("- 使用 [JSONLint](https://jsonlint.com/) 验证 JSON 格式")
+        markdown.append("- 使用支持 JSON 语法高亮的编辑器（如 VS Code）")
+        markdown.append("")
+        markdown.append("如需帮助，请查看 [用户指南](https://github.com/bestzwei/LibreDomains/blob/main/docs/user-guide.md)")
     
     return "\n".join(markdown)
 
