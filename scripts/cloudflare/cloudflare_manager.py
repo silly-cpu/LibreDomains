@@ -13,9 +13,9 @@ import sys
 import time
 import argparse
 import requests
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
-# 添加项目根目录到 Python 路径
+# 添加项目根目录到 Python 跻
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from scripts.utils.common import load_json_file
@@ -151,6 +151,8 @@ class CloudflareManager:
         Returns:
             DNS 记录列表
         """
+        import urllib.parse
+        
         params = {}
         if record_type:
             params['type'] = record_type
@@ -159,10 +161,30 @@ class CloudflareManager:
         
         endpoint = f'zones/{zone_id}/dns_records'
         if params:
-            endpoint += '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
+            # 修复：使用 urllib.parse.urlencode 正确编码参数
+            query_string = urllib.parse.urlencode(params)
+            endpoint += f'?{query_string}'
         
-        result = self._request('GET', endpoint)
-        return result.get('result', [])
+        try:
+            result = self._request('GET', endpoint)
+            return result.get('result', [])
+        except Exception as e:
+            # 增强错误处理，提供更详细的错误信息
+            error_msg = str(e)
+            if "400 Client Error" in error_msg:
+                # 检查常见的 400 错误原因
+                if name:
+                    raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
+                                  f"1. Zone ID '{zone_id}' 不正确\n"
+                                  f"2. 域名格式 '{name}' 不正确\n"
+                                  f"3. API Token 权限不足\n"
+                                  f"原始错误: {error_msg}")
+                else:
+                    raise Exception(f"DNS 记录查询失败 - 可能的原因:\n"
+                                  f"1. Zone ID '{zone_id}' 不正确\n"
+                                  f"2. API Token 权限不足或已过期\n"
+                                  f"原始错误: {error_msg}")
+            raise e
     
     def create_dns_record(self, zone_id: str, record_type: str, name: str, content: str, 
                          ttl: int = 3600, proxied: bool = True, priority: int = None) -> Dict[str, Any]:
@@ -272,33 +294,58 @@ class CloudflareManager:
         else:
             full_name = f"{subdomain}.{domain}"
         
-        # 获取现有记录 - 修复：应该获取所有相关记录，不只是精确匹配
-        existing_records = []
-        for record in records:
-            name = record['name']
-            if name == '@':
-                record_name = full_name
-            else:
-                record_name = f"{name}.{full_name}" if subdomain != '@' else f"{name}.{domain}"
-            
-            # 获取该记录名称的现有记录
-            existing_for_name = self.list_dns_records(zone_id, name=record_name)
-            existing_records.extend(existing_for_name)
-        
-        # 创建记录映射
-        existing_map = {}
-        for record in existing_records:
-            key = f"{record['type']}:{record['name']}"
-            existing_map[key] = record
-        
         result = {
             'domain': domain,
             'subdomain': subdomain,
             'created': [],
             'updated': [],
             'deleted': [],
-            'errors': []
+            'errors': [],
+            'debug_info': {}
         }
+        
+        # 添加调试信息
+        try:
+            debug_info = self.debug_dns_query(zone_id, full_name)
+            result['debug_info'] = debug_info
+            
+            if not debug_info.get('zone_access', {}).get('valid', False):
+                result['errors'].append(f"Zone 访问失败: {debug_info['zone_access']['message']}")
+                return result
+                
+        except Exception as e:
+            result['errors'].append(f"调试查询失败: {str(e)}")
+        
+        # 获取现有记录 - 修复：先获取所有记录，然后手动过滤
+        existing_records = []
+        try:
+            all_records_result = self._request('GET', f'zones/{zone_id}/dns_records')
+            all_records = all_records_result.get('result', [])
+            
+            # 手动过滤相关记录
+            for record in records:
+                name = record['name']
+                if name == '@':
+                    record_name = full_name
+                else:
+                    record_name = f"{name}.{full_name}" if subdomain != '@' else f"{name}.{domain}"
+                
+                # 查找匹配的现有记录
+                matching_records = [
+                    r for r in all_records 
+                    if r.get('name', '').lower() == record_name.lower()
+                ]
+                existing_records.extend(matching_records)
+                
+        except Exception as e:
+            result['errors'].append(f"获取现有记录失败: {str(e)}")
+            return result
+        
+        # 创建记录映射
+        existing_map = {}
+        for record in existing_records:
+            key = f"{record['type']}:{record['name']}"
+            existing_map[key] = record
         
         # 处理新记录
         new_map = {}
@@ -359,6 +406,88 @@ class CloudflareManager:
         
         return result
 
+    def verify_zone_access(self, zone_id: str) -> Tuple[bool, str]:
+        """
+        验证 Zone 访问权限
+        
+        Args:
+            zone_id: Zone ID
+            
+        Returns:
+            (是否有访问权限, 错误信息)
+        """
+        try:
+            result = self._request('GET', f'zones/{zone_id}')
+            zone_info = result.get('result', {})
+            zone_name = zone_info.get('name', 'Unknown')
+            return True, f"Zone '{zone_name}' 访问正常"
+        except Exception as e:
+            return False, f"Zone 访问失败: {str(e)}"
+
+    def debug_dns_query(self, zone_id: str, name: str = None) -> Dict[str, Any]:
+        """
+        调试 DNS 查询，提供详细的诊断信息
+        
+        Args:
+            zone_id: Zone ID
+            name: 记录名称 (可选)
+            
+        Returns:
+            调试信息
+        """
+        debug_info = {
+            'zone_id': zone_id,
+            'query_name': name,
+            'api_token_type': 'Token' if self.is_token else 'Key',
+            'base_url': self.base_url,
+            'timeout': self.timeout
+        }
+        
+        # 验证 Zone 访问权限
+        zone_valid, zone_msg = self.verify_zone_access(zone_id)
+        debug_info['zone_access'] = {
+            'valid': zone_valid,
+            'message': zone_msg
+        }
+        
+        if not zone_valid:
+            return debug_info
+            
+        # 尝试获取所有记录（不使用 name 过滤）
+        try:
+            all_records = self._request('GET', f'zones/{zone_id}/dns_records')
+            debug_info['total_records'] = len(all_records.get('result', []))
+            
+            if name:
+                # 手动过滤记录
+                matching_records = [
+                    record for record in all_records.get('result', [])
+                    if record.get('name', '').lower() == name.lower()
+                ]
+                debug_info['matching_records'] = len(matching_records)
+                debug_info['sample_records'] = [
+                    {
+                        'name': record.get('name'),
+                        'type': record.get('type'),
+                        'content': record.get('content')
+                    }
+                    for record in all_records.get('result', [])[:5]  # 显示前5条记录作为样本
+                ]
+            else:
+                debug_info['sample_records'] = [
+                    {
+                        'name': record.get('name'),
+                        'type': record.get('type'),
+                        'content': record.get('content')
+                    }
+                    for record in all_records.get('result', [])[:5]
+                ]
+                
+        except Exception as e:
+            debug_info['records_query_error'] = str(e)
+            
+        return debug_info
+
 
 def main():
     """命令行入口点"""
@@ -369,15 +498,35 @@ def main():
     parser.add_argument('--domain', required=True, help='域名')
     parser.add_argument('--subdomain', required=True, help='子域名')
     parser.add_argument('--json-file', help='JSON 配置文件路径')
-    parser.add_argument('--action', choices=['list', 'sync'], default='sync', help='操作类型')
+    parser.add_argument('--action', choices=['list', 'sync', 'debug'], default='sync', help='操作类型')
+    parser.add_argument('--debug', action='store_true', help='启用调试模式')
     
     args = parser.parse_args()
     
     try:
         manager = CloudflareManager(args.api_key, args.email, args.config)
         
-        if args.action == 'list':
+        if args.action == 'debug':
+            # 新增：调试模式
             zone_id = manager.get_zone_id(args.domain)
+            full_name = f"{args.subdomain}.{args.domain}" if args.subdomain != '@' else args.domain
+            
+            print("=== 调试信息 ===")
+            debug_info = manager.debug_dns_query(zone_id, full_name)
+            print(json.dumps(debug_info, indent=2, ensure_ascii=False))
+            
+            return 0
+        
+        elif args.action == 'list':
+            zone_id = manager.get_zone_id(args.domain)
+            
+            if args.debug:
+                print("=== 调试模式启用 ===")
+                debug_info = manager.debug_dns_query(zone_id)
+                print("调试信息:")
+                print(json.dumps(debug_info, indent=2, ensure_ascii=False))
+                print("\n=== DNS 记录列表 ===")
+            
             records = manager.list_dns_records(zone_id)
             print(json.dumps(records, indent=2, ensure_ascii=False))
         
@@ -405,6 +554,10 @@ def main():
         
     except Exception as e:
         print(f"错误: {str(e)}")
+        if args.debug:
+            import traceback
+            print("\n完整错误堆栈:")
+            traceback.print_exc()
         return 1
 
 
