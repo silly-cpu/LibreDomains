@@ -10,14 +10,14 @@
       "name": "@",
       "content": "185.199.101.153",
       "ttl": 3600,
-      "proxied": false
+      "proxied": true
     },
     {
       "type": "CNAME",
       "name": "www",
       "content": "xxx.com",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     }
   ]
 }
