@@ -1,0 +1,90 @@
+name: 部署域名配置
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'domains/**/*.json'
+      
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: '强制更新所有域名配置'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+        
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: 安装依赖
+        run: pip install requests dnspython
+        
+      - name: 获取更改的文件
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.force_all == 'false' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: 'domains/**/*.json'
+          separator: ' '
+          since_last_remote_commit: true
+      
+      - name: 获取所有域名文件
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_all == 'true' }}
+        id: all-files
+        run: |
+          find domains -name "*.json" -not -name "example.json" > all_files.txt
+          DOMAIN_FILES=$(cat all_files.txt | tr '\n' ' ')
+          echo "files=$DOMAIN_FILES" >> $GITHUB_OUTPUT
+          
+      - name: 设置部署文件
+        id: deploy-files
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.force_all }}" == "true" ]; then
+            FILES="${{ steps.all-files.outputs.files }}"
+          else
+            FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          fi
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+      - name: 部署域名配置
+        if: steps.deploy-files.outputs.files != ''
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          for file in ${{ steps.deploy-files.outputs.files }}; do
+            echo "处理文件: $file"
+            # 提取域名和子域名
+            DOMAIN=$(echo $file | cut -d'/' -f2)
+            SUBDOMAIN=$(basename $file .json)
+            
+            # 跳过示例文件
+            if [ "$SUBDOMAIN" == "example" ]; then
+              echo "跳过示例文件"
+              continue
+            fi
+            
+            echo "域名: $DOMAIN, 子域名: $SUBDOMAIN"
+            
+            # 部署 DNS 配置
+            python scripts/cloudflare/cloudflare_manager.py \
+              --api-key "$CLOUDFLARE_API_KEY" \
+              --email "$CLOUDFLARE_EMAIL" \
+              --domain "$DOMAIN" \
+              --subdomain "$SUBDOMAIN" \
+              --json-file "$file" \
+              --action sync
+          done

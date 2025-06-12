@@ -1,0 +1,45 @@
+name: 域名健康检查
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: 安装依赖
+        run: pip install requests dnspython
+        
+      - name: 运行健康检查
+        run: |
+          python scripts/health/domain_health.py --output health_report.md
+          
+      - name: 更新健康报告
+        run: |
+          # 将报告复制到 docs 目录
+          cp health_report.md docs/health_report.md
+          
+          # 提交变更
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/health_report.md
+          git commit -m "更新域名健康状态报告" || echo "No changes to commit"
+          
+      - name: 推送更新
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

@@ -1,0 +1,42 @@
+name: 生成域名统计
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日运行一次
+  workflow_dispatch:
+
+jobs:
+  generate-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: 安装依赖
+        run: pip install requests dnspython
+        
+      - name: 生成统计报告
+        run: |
+          python scripts/stats/domain_stats.py --output docs/stats_report.md --json docs/stats.json
+          
+      - name: 更新统计报告
+        run: |
+          # 提交变更
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/stats_report.md docs/stats.json
+          git commit -m "更新域名统计报告" || echo "No changes to commit"
+          
+      - name: 推送更新
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
