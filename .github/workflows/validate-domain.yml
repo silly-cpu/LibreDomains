@@ -49,6 +49,7 @@ jobs:
             echo ""
             echo "❌ 域名配置验证失败，请查看上方的详细错误信息。"
             exit 1
+          fi
       
       - name: 无文件更改
         if: steps.changed-files.outputs.all_changed_files == ''
