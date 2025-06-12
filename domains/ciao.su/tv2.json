@@ -8,7 +8,7 @@
     {
       "type": "A",
       "name": "@",
-      "content": "185.199.101.153",
+      "content": "185.199.101.113",
       "ttl": 3600,
       "proxied": true
     },
