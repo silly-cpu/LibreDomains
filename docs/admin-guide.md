@@ -121,6 +121,45 @@ python scripts/validation/domain_validator.py
 
 ## 添加新功能
 
+### 管理保留子域名
+
+保留子域名配置在 `config/domains.json` 文件的 `reserved_subdomains` 数组中：
+
+```json
+{
+  "reserved_subdomains": [
+    "www", "mail", "email", "webmail", "ns", "dns",
+    "api", "cdn", "ftp", "sftp",
+    "admin", "panel", "dashboard", "control",
+    "dev", "test", "staging", "demo",
+    "blog", "forum", "wiki", "docs",
+    "app", "mobile", "static", "assets"
+  ]
+}
+```
+
+#### 添加新的保留子域名
+
+1. 编辑 `config/domains.json`
+2. 在 `reserved_subdomains` 数组中添加新的子域名
+3. 提交更改并推送到主分支
+4. 更新相关文档
+
+#### 移除保留子域名
+
+1. 从 `reserved_subdomains` 数组中移除子域名
+2. 确保该子域名未被系统关键功能使用
+3. 更新文档说明变更
+
+#### 批准保留子域名的特例申请
+
+在特殊情况下，管理员可以批准保留子域名的申请：
+
+1. 在 PR 中讨论申请理由
+2. 临时修改验证脚本跳过该检查
+3. 合并 PR 后恢复验证脚本
+4. 记录特例决定和原因
+
 ### 增加新的记录类型支持
 
 1. 更新 `config/domains.json` 中的 `record_types` 列表

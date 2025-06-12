@@ -61,7 +61,10 @@ def get_domain_files(domain: str, domains_dir: str = None) -> List[str]:
     if not os.path.isdir(domain_dir):
         return []
     
-    return [os.path.join(domain_dir, f) for f in os.listdir(domain_dir) if f.endswith('.json') and f != 'example.json']
+    # 排除示例文件和保留文件
+    excluded_files = ['example.json', 'template.json', '.example.json']
+    return [os.path.join(domain_dir, f) for f in os.listdir(domain_dir) 
+            if f.endswith('.json') and f not in excluded_files]
 
 
 def load_domain_config(file_path: str) -> Optional[Dict[str, Any]]:

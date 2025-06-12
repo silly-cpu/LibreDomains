@@ -136,10 +136,22 @@ LibreDomains 是一个基于 GitHub 的二级域名分发服务，通过以下�
   "record_types": ["A", "AAAA", "CNAME", "TXT", "MX"],
   "max_records_per_subdomain": 10,
   "cloudflare_timeout": 30,
-  "reserved_subdomains": ["www", "mail", "email", "webmail", "api", "dev", "blog", "app", "admin", "ns", "dns"],
+  "reserved_subdomains": [
+    "www", "mail", "email", "webmail", "ns", "dns",
+    "api", "cdn", "ftp", "sftp",
+    "admin", "panel", "dashboard", "control",
+    "dev", "test", "staging", "demo",
+    "blog", "forum", "wiki", "docs",
+    "app", "mobile", "static", "assets"
+  ],
   "max_subdomains_per_user": 3
 }
 ```
+
+**保留子域名配置说明**:
+- `reserved_subdomains`: 数组，包含所有不允许申请的子域名
+- 检查时不区分大小写
+- 管理员可通过修改此配置来添加或移除保留子域名
 
 ### 域名记录格式
 

@@ -93,12 +93,13 @@ def is_valid_domain_name(domain: str) -> bool:
     return bool(re.match(pattern, domain, re.IGNORECASE))
 
 
-def is_valid_subdomain(subdomain: str) -> bool:
+def is_valid_subdomain(subdomain: str, reserved_subdomains: List[str] = None) -> bool:
     """
     检查子域名是否合法
     
     Args:
         subdomain: 子域名
+        reserved_subdomains: 保留子域名列表 (可选)
     
     Returns:
         是否合法
@@ -106,6 +107,11 @@ def is_valid_subdomain(subdomain: str) -> bool:
     # @ 表示根域名
     if subdomain == '@':
         return True
+    
+    # 检查是否为保留子域名
+    if reserved_subdomains:
+        if subdomain.lower() in [r.lower() for r in reserved_subdomains]:
+            return False
     
     # 修复：与 domain_validator.py 保持一致，并确保小写
     pattern = r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'

@@ -160,12 +160,13 @@ class AdminTool:
         
         return True
     
-    def list_subdomains(self, domain: str) -> List[str]:
+    def list_subdomains(self, domain: str, include_reserved: bool = False) -> List[str]:
         """
         列出域名下的所有子域名
         
         Args:
             domain: 域名
+            include_reserved: 是否包含保留/示例文件
         
         Returns:
             子域名列表
@@ -174,7 +175,13 @@ class AdminTool:
         if not os.path.isdir(domain_dir):
             return []
         
-        return [f[:-5] for f in os.listdir(domain_dir) if f.endswith('.json') and f != 'example.json']
+        if include_reserved:
+            return [f[:-5] for f in os.listdir(domain_dir) if f.endswith('.json')]
+        else:
+            # 排除示例文件和保留文件
+            excluded_files = ['example.json', 'template.json', '.example.json']
+            return [f[:-5] for f in os.listdir(domain_dir) 
+                    if f.endswith('.json') and f not in excluded_files]
     
     def get_subdomain_config(self, domain: str, subdomain: str) -> Optional[Dict[str, Any]]:
         """

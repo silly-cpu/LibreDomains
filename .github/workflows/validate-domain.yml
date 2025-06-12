@@ -41,9 +41,10 @@ jobs:
           echo "=== 开始验证域名配置 ==="
           echo "更改的文件: ${{ steps.changed-files.outputs.all_changed_files }}"
           echo "PR作者: ${{ github.event.pull_request.user.login }}"
+          echo "检查保留子域名: 启用"
           echo ""
           
-          # 运行验证脚本并直接输出到控制台，包含所有权验证
+          # 运行验证脚本并直接输出到控制台，包含所有权验证和保留子域名检查
           if python scripts/bot/pr_checker.py \
             --files ${{ steps.changed-files.outputs.all_changed_files }} \
             --pr-author "${{ github.event.pull_request.user.login }}" \

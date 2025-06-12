@@ -112,6 +112,21 @@ def is_domain_available(domain: str, subdomain: str, domains_dir: str = None) ->
     return not os.path.exists(os.path.join(domain_dir, f"{subdomain}.json"))
 
 
+def is_reserved_subdomain(subdomain: str, config: Dict[str, Any]) -> bool:
+    """
+    检查子域名是否为保留子域名
+    
+    Args:
+        subdomain: 子域名名称
+        config: 项目配置信息
+    
+    Returns:
+        是否为保留子域名
+    """
+    reserved_subdomains = config.get('reserved_subdomains', [])
+    return subdomain.lower() in [r.lower() for r in reserved_subdomains]
+
+
 def validate_record(record: Dict[str, Any], config: Dict[str, Any]) -> Tuple[bool, List[str]]:
     """
     验证 DNS 记录
@@ -340,6 +355,12 @@ def validate_pull_request(pr_files: List[str], config: Optional[Dict[str, Any]] 
             continue
         
         subdomain = filename[:-5]  # 去除 .json 后缀
+        
+        # 检查是否为保留子域名
+        if is_reserved_subdomain(subdomain, config):
+            results[display_path] = [f"子域名 '{subdomain}' 是保留子域名，不允许申请。保留子域名列表: {', '.join(config.get('reserved_subdomains', []))}"]
+            all_valid = False
+            continue
         
         # 验证子域名
         if not is_valid_domain_name(subdomain):

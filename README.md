@@ -66,8 +66,13 @@ LibreDomains 是一个开源的二级域名分发服务，允许用户通过 Git
 3. 子域名不能以连字符开头或结尾
 4. 一个 GitHub 用户最多可以申请 3 个子域名
 5. 每个子域名最多可以有 10 个 DNS 记录
-6. 不允许申请以下保留的子域名:
-   - `www`, `mail`, `email`, `webmail`, `api`, `dev`, `blog`, `app`, `admin`, `ns`, `dns`
+6. **不允许申请以下保留的子域名**:
+   - **系统保留**: `www`, `mail`, `email`, `webmail`, `ns`, `dns`
+   - **服务保留**: `api`, `cdn`, `ftp`, `sftp`
+   - **管理保留**: `admin`, `panel`, `dashboard`, `control`
+   - **开发保留**: `dev`, `test`, `staging`, `demo`
+   - **内容保留**: `blog`, `forum`, `wiki`, `docs`，`tv`
+   - **应用保留**: `app`, `mobile`, `static`, `assets`
 
 ## 管理域名
 

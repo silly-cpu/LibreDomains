@@ -31,6 +31,7 @@
    - 例如: 如果您想申请 `myapp.ciao.su`，请导航到 `domains/ciao.su/`
 2. 点击 "Add file" > "Create new file"
 3. 将文件命名为您想要的子域名，如 `myapp.json`
+   - **注意**: 请确保您的子域名不在保留列表中
 4. 填写文件内容，格式如下:
 
 ```json
@@ -51,6 +52,22 @@
   ]
 }
 ```
+
+### 保留子域名说明
+
+以下子域名为系统保留，不允许申请：
+
+- **系统功能**: `www`, `mail`, `email`, `webmail`, `ns`, `dns`
+- **服务相关**: `api`, `cdn`, `ftp`, `sftp`
+- **管理相关**: `admin`, `panel`, `dashboard`, `control`
+- **开发相关**: `dev`, `test`, `staging`, `demo`
+- **内容相关**: `blog`, `forum`, `wiki`, `docs`,`tv`
+- **应用相关**: `app`, `mobile`, `static`, `assets`
+
+如果您需要申请类似功能的子域名，建议使用变体，如：
+- `myblog` 而不是 `blog`
+- `myapi` 而不是 `api`
+- `myapp` 而不是 `app`
 
 #### 3. 提交 Pull Request
 
