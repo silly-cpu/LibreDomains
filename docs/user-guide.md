@@ -47,7 +47,7 @@
       "name": "@",
       "content": "您的IP地址",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     }
   ]
 }
@@ -113,7 +113,7 @@
   "name": "@",       // @ 表示域名本身，其他值如 "www" 表示子域名
   "content": "185.199.108.153",   // IP 地址
   "ttl": 3600,       // 缓存时间（秒）
-  "proxied": true    // 是否经过 Cloudflare 代理
+  "proxied": false   // 是否经过 Cloudflare 代理
 }
 ```
 
@@ -127,7 +127,7 @@
   "name": "@",
   "content": "2606:4700:90:0:f22e:fbec:5bed:a9b9",
   "ttl": 3600,
-  "proxied": true
+  "proxied": false
 }
 ```
 
@@ -141,7 +141,7 @@
   "name": "www",
   "content": "username.github.io",
   "ttl": 3600,
-  "proxied": true
+  "proxied": false
 }
 ```
 

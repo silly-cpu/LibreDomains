@@ -46,14 +46,14 @@ LibreDomains 是一个开源的二级域名分发服务，允许用户通过 Git
       "name": "@",
       "content": "xxx.xxx.xxx.xxx",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     },
     {
       "type": "CNAME",
       "name": "www",
       "content": "xxx.com",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     }
   ]
 }

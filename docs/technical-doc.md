@@ -169,14 +169,14 @@ LibreDomains 是一个基于 GitHub 的二级域名分发服务，通过以下�
       "name": "@",
       "content": "185.199.108.153",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     },
     {
       "type": "CNAME",
       "name": "www",
       "content": "username.github.io",
       "ttl": 3600,
-      "proxied": true
+      "proxied": false
     }
   ]
 }
