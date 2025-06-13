@@ -108,10 +108,10 @@ LibreDomains 是一个基于 GitHub 的二级域名分发服务，通过以下�
 主要函数：
 
 - `load_config(config_path=None)`: 加载配置
-- `validate_domain_name(domain)`: 验证域名格式
-- `validate_subdomain_name(subdomain)`: 验证子域名格式
-- `validate_json_file(file_path)`: 验证 JSON 文件
-- `validate_pull_request(changed_files)`: 验证 PR 中的文件
+- `is_valid_domain_name(domain)`: 验证域名格式
+- `is_reserved_subdomain(subdomain, config)`: 检查是否为保留子域名
+- `validate_domain_config(file_path, config)`: 验证域名配置文件
+- `validate_pull_request(pr_files, config)`: 验证 PR 中的文件
 
 ## 配置参考
 
@@ -149,7 +149,8 @@ LibreDomains 是一个基于 GitHub 的二级域名分发服务，通过以下�
 ```
 
 **保留子域名配置说明**:
-- `reserved_subdomains`: 数组，包含所有不允许申请的子域名
+- `reserved_subdomains`: 数组，包含所有不允许用户申请的子域名
+- 包括根域名 `@`，确保主域名控制权在管理员手中
 - 检查时不区分大小写
 - 管理员可通过修改此配置来添加或移除保留子域名
 

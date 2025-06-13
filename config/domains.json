@@ -17,11 +17,12 @@
   "max_records_per_subdomain": 10,
   "cloudflare_timeout": 30,
   "reserved_subdomains": [
+    "@",
     "www", "mail", "email", "webmail", "ns", "dns",
     "api", "cdn", "ftp", "sftp",
     "admin", "panel", "dashboard", "control",
     "dev", "test", "staging", "demo",
-    "blog", "forum", "wiki", "docs","tv",
+    "blog", "forum", "wiki", "docs", "tv",
     "app", "mobile", "static", "assets"
   ],
   "max_subdomains_per_user": 3,
