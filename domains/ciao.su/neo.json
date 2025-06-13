@@ -8,9 +8,9 @@
     {
   "type": "CNAME",
   "name": "re",
-  "content": "xn--1cts3f.xn--tiq304e.xn--7dvrl.xn--0trw50k.xn--sny74y.xn--gwtv55d.xn--55qw64d.xn--wvw1b.xn--vcsx64d.xn--vhq618c.xn--vuqy57l.xn--iory3b.cloudflare.182682.xyz",
+  "content": "libretv-5za.pages.dev",
   "ttl": 3600,
-  "proxied": true
+  "proxied": false
     }
   ]
 }
