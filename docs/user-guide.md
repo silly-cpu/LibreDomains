@@ -39,7 +39,7 @@
   "owner": {
     "name": "您的姓名",
     "github": "您的GitHub用户名",
-    "email": "您的邮箱（可选）"
+    "email": "您的邮箱"
   },
   "records": [
     {

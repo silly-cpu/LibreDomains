@@ -30,7 +30,7 @@ LibreDomains 是一个开源的二级域名分发服务，允许用户通过 Git
   "owner": {
     "name": "你的名字",
     "github": "你的GitHub用户名",
-    "email": "你的邮箱（可选）"
+    "email": "你的邮箱"
   },
   "records": [
     {
