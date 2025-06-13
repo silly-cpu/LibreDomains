@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreDomains - 自由域名分发服务</title>
+    <meta name="description" content="LibreDomains 是一个开源的二级域名分发服务，通过 GitHub Pull Request 申请和管理免费二级域名">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>LibreDomains</h1>
+                <p>自由域名分发服务</p>
+            </div>
+            <nav class="nav">
+                <a href="#features">功能特性</a>
+                <a href="#domains">可用域名</a>
+                <a href="#guide">申请指南</a>
+                <a href="#docs">文档</a>
+                <a href="https://github.com/bestzwei/LibreDomains" target="_blank">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h2>免费获得你的专属二级域名</h2>
+                <p>通过 GitHub Pull Request 快速申请和管理二级域名，完全开源、免费使用</p>
+                <div class="hero-actions">
+                    <a href="#guide" class="btn btn-primary">开始申请</a>
+                    <a href="https://github.com/bestzwei/LibreDomains" target="_blank" class="btn btn-secondary">查看源码</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2>功能特性</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🚀</div>
+                        <h3>快速申请</h3>
+                        <p>通过 GitHub PR 快速申请域名，自动化审核流程</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔒</div>
+                        <h3>安全可靠</h3>
+                        <p>基于 Cloudflare 的 DNS 服务，提供安全防护和高可用性</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🆓</div>
+                        <h3>完全免费</h3>
+                        <p>开源项目，完全免费使用，无隐藏费用</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>快速生效</h3>
+                        <p>域名记录通常在 5-15 分钟内生效</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛠️</div>
+                        <h3>灵活配置</h3>
+                        <p>支持 A、AAAA、CNAME、TXT、MX 等多种记录类型</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📱</div>
+                        <h3>易于管理</h3>
+                        <p>通过 GitHub 轻松管理和更新域名记录</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="domains" class="domains">
+            <div class="container">
+                <h2>可用域名</h2>
+                <div class="domains-grid">
+                    <div class="domain-card available">
+                        <h3>ciao.su</h3>
+                        <span class="status">✅ 可用</span>
+                        <p>主要域名，正在开放申请</p>
+                    </div>
+                    <div class="domain-card paused">
+                        <h3>ciallo.de</h3>
+                        <span class="status">⏸️ 暂停开放</span>
+                        <p>备用域名，暂时不开放申请</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide" class="guide">
+            <div class="container">
+                <h2>申请指南</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Fork 仓库</h3>
+                            <p>访问 <a href="https://github.com/bestzwei/LibreDomains" target="_blank">GitHub 仓库</a> 并 Fork 到你的账户</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>创建配置文件</h3>
+                            <p>在 <code>domains/ciao.su/</code> 目录下创建 JSON 配置文件</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>填写配置</h3>
+                            <p>按照指定格式填写域名配置信息</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>提交 PR</h3>
+                            <p>提交 Pull Request 并等待自动检查和审核</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h3>域名生效</h3>
+                            <p>PR 合并后，域名记录将在几分钟内生效</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-example">
+                    <h3>配置文件示例</h3>
+                    <pre><code>{
+  "owner": {
+    "name": "你的名字",
+    "github": "你的GitHub用户名",
+    "email": "你的邮箱"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "185.199.108.153",
+      "ttl": 3600,
+      "proxied": true
+    },
+    {
+      "type": "CNAME",
+      "name": "www",
+      "content": "你的GitHub用户名.github.io",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section class="rules">
+            <div class="container">
+                <h2>申请规则</h2>
+                <div class="rules-grid">
+                    <div class="rule-card">
+                        <h3>域名格式</h3>
+                        <ul>
+                            <li>小写字母、数字和连字符组成</li>
+                            <li>长度在 2-63 个字符之间</li>
+                            <li>不能以连字符开头或结尾</li>
+                        </ul>
+                    </div>
+                    <div class="rule-card">
+                        <h3>数量限制</h3>
+                        <ul>
+                            <li>每个用户最多申请 3 个子域名</li>
+                            <li>每个子域名最多 10 个 DNS 记录</li>
+                        </ul>
+                    </div>
+                    <div class="rule-card">
+                        <h3>保留域名</h3>
+                        <ul>
+                            <li>系统保留：www, mail, api, admin</li>
+                            <li>服务保留：cdn, ftp, ns, dns</li>
+                            <li>开发保留：dev, test, staging</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="docs">
+            <div class="container">
+                <h2>相关文档</h2>
+                <div class="docs-grid">
+                    <a href="https://github.com/bestzwei/LibreDomains/blob/main/docs/user-guide.md" target="_blank" class="doc-card">
+                        <div class="doc-icon">📖</div>
+                        <h3>用户指南</h3>
+                        <p>详细的使用教程和常见问题解答</p>
+                    </a>
+                    <a href="https://github.com/bestzwei/LibreDomains/blob/main/docs/admin-guide.md" target="_blank" class="doc-card">
+                        <div class="doc-icon">👥</div>
+                        <h3>管理员指南</h3>
+                        <p>管理员操作指南和维护说明</p>
+                    </a>
+                    <a href="https://github.com/bestzwei/LibreDomains/blob/main/docs/technical-doc.md" target="_blank" class="doc-card">
+                        <div class="doc-icon">🔧</div>
+                        <h3>技术文档</h3>
+                        <p>技术实现细节和 API 参考</p>
+                    </a>
+                    <a href="https://github.com/bestzwei/LibreDomains" target="_blank" class="doc-card">
+                        <div class="doc-icon">📊</div>
+                        <h3>GitHub 仓库</h3>
+                        <p>查看源码，提交 Issue 和 PR</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>LibreDomains</h3>
+                    <p>开源的二级域名分发服务</p>
+                </div>
+                <div class="footer-section">
+                    <h3>链接</h3>
+                    <ul>
+                        <li><a href="https://github.com/bestzwei/LibreDomains" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/bestzwei/LibreDomains/issues" target="_blank">问题反馈</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>文档</h3>
+                    <ul>
+                        <li><a href="https://github.com/bestzwei/LibreDomains/blob/main/docs/user-guide.md" target="_blank">用户指南</a></li>
+                        <li><a href="https://github.com/bestzwei/LibreDomains/blob/main/docs/technical-doc.md" target="_blank">技术文档</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="year"></span> LibreDomains. 采用 MIT 许可证开源</p>
+                <script>
+                  document.getElementById('year').textContent = new Date().getFullYear();
+                </script>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
