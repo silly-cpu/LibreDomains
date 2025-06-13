@@ -8,7 +8,7 @@
     {
       "type": "CNAME",
       "name": "www",
-      "content": "github-private-repository.pages.dev",
+      "content": "alist-b1p.pages.dev",
       "ttl": 3600,
       "proxied": true
     }
