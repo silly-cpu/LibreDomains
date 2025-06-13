@@ -100,6 +100,7 @@ LibreDomains 是一个开源的二级域名分发服务，允许用户通过 Git
 - **[管理员指南](docs/admin-guide.md)** - 管理员操作和维护指南
 - **[技术文档](docs/technical-doc.md)** - 项目技术架构和实现细节
 - **[项目实施总结](docs/implementation-summary.md)** - 项目功能清单和架构概览
+- **[服务条款](docs/terms-of-service.md)** - 服务使用条款和用户协议
 
 ## 贡献代码
 
