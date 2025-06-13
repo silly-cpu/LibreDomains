@@ -2,6 +2,14 @@
 
 LibreDomains 是一个开源的二级域名分发服务，允许用户通过 GitHub Pull Request 来申请和管理二级域名。
 
+## 快速导航
+
+- 🚀 [开始申请域名](#申请域名) - 立即申请你的免费二级域名
+- 📖 [用户指南](docs/user-guide.md) - 详细的使用教程和常见问题
+- 👥 [管理员指南](docs/admin-guide.md) - 管理员操作指南
+- 🔧 [技术文档](docs/technical-doc.md) - 技术实现和 API 参考
+- 📊 [项目概览](docs/implementation-summary.md) - 功能清单和架构说明
+
 ## 可用域名
 
 目前，本项目提供以下域名：
@@ -82,6 +90,15 @@ LibreDomains 是一个开源的二级域名分发服务，允许用户通过 Git
 2. 提交新的 Pull Request
 3. 等待自动检查和审核
 4. Pull Request 被合并后，更新将在几分钟内生效
+
+## 文档
+
+更多详细信息请参考以下文档：
+
+- **[用户指南](docs/user-guide.md)** - 详细的域名申请和管理教程
+- **[管理员指南](docs/admin-guide.md)** - 管理员操作和维护指南
+- **[技术文档](docs/technical-doc.md)** - 项目技术架构和实现细节
+- **[项目实施总结](docs/implementation-summary.md)** - 项目功能清单和架构概览
 
 ## 贡献代码
 
