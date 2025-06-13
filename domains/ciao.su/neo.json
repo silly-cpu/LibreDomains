@@ -10,7 +10,7 @@
   "name": "re",
   "content": "libretv-5za.pages.dev",
   "ttl": 3600,
-  "proxied": true
+  "proxied": false
     }
   ]
 }
