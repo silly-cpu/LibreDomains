@@ -7,7 +7,7 @@
   "records": [
     {
       "type": "CNAME",
-      "name": "etl",
+      "name": "cxk",
       "content": "edl27.pages.dev",
       "ttl": 3600,
       "proxied": true
