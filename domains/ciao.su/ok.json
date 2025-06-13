@@ -1,0 +1,23 @@
+{
+  "owner": {
+    "name": "JUJU",
+    "github": "justn-gpt",
+    "email": "gjustn@gmail.com"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "185.199.108.153",
+      "ttl": 3600,
+      "proxied": true
+    },
+    {
+      "type": "CNAME",
+      "name": "www",
+      "content": "justn-gpt.github.io",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}
