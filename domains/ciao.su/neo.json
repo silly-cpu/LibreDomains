@@ -6,11 +6,11 @@
   },
   "records": [
     {
-      "type": "A",
-      "name": "@",
-      "content": "193.123.233.25",
-      "ttl": 3600,
-      "proxied": true
+  "type": "CNAME",
+  "name": "re",
+  "content": "libretv-5za.pages.dev",
+  "ttl": 3600,
+  "proxied": true
     }
   ]
 }
