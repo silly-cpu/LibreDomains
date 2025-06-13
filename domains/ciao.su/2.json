@@ -1,0 +1,23 @@
+{
+  "owner": {
+    "name": "tmw",
+    "github": "dsblkkk",
+    "email": "zgyunlei@outlook.com"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "185.199.108.153",
+      "ttl": 3600,
+      "proxied": true
+    },
+    {
+      "type": "CNAME",
+      "name": "www",
+      "content": "dsblkkk.github.io",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}
