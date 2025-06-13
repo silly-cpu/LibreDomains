@@ -326,8 +326,10 @@ function initSubdomainChecker() {
     const checkerResult = document.getElementById('checkerResult');
     const totalDomainsSpan = document.getElementById('totalDomains');
     const recentDomainsList = document.getElementById('recentDomainsList');
+    const domainSelect = document.getElementById('domainSelect');
+    const domainSuffix = document.getElementById('domainSuffix');
     
-    let registeredDomains = new Set();
+    let registeredDomains = new Map(); // 改为 Map，按域名分组存储
     let reservedSubdomains = new Set([
         '@', 'www', 'mail', 'email', 'webmail', 'ns', 'dns',
         'api', 'cdn', 'ftp', 'sftp', 'admin', 'panel', 
@@ -335,6 +337,12 @@ function initSubdomainChecker() {
         'demo', 'blog', 'forum', 'wiki', 'docs', 'tv',
         'app', 'mobile', 'static', 'assets'
     ]);
+
+    // 域名配置
+    const domainConfig = {
+        'ciao.su': { enabled: true, path: 'ciao.su' },
+        'ciallo.de': { enabled: false, path: 'ciallo.de' }
+    };
 
     // 检查是否支持必要的 API
     if (!window.fetch) {
@@ -347,6 +355,30 @@ function initSubdomainChecker() {
         return;
     }
 
+    // 域名选择器事件
+    domainSelect.addEventListener('change', function() {
+        const selectedDomain = this.value;
+        const isEnabled = domainConfig[selectedDomain]?.enabled;
+        
+        // 更新后缀显示
+        domainSuffix.textContent = '.' + selectedDomain;
+        
+        // 更新样式
+        if (isEnabled) {
+            domainSuffix.classList.remove('paused');
+            checkButton.disabled = false;
+        } else {
+            domainSuffix.classList.add('paused');
+            checkButton.disabled = true;
+        }
+        
+        // 清除之前的结果
+        checkerResult.classList.remove('show');
+        
+        // 重新加载该域名的数据
+        loadRegisteredDomains(selectedDomain);
+    });
+
     // 加载已注册的域名数据
     loadRegisteredDomains();
 
@@ -356,31 +388,34 @@ function initSubdomainChecker() {
         const isValid = validateSubdomain(value);
         const inputGroup = this.parentElement;
         const validationHint = inputGroup.nextElementSibling;
+        const selectedDomain = domainSelect.value;
+        const isDomainEnabled = domainConfig[selectedDomain]?.enabled;
 
         if (value === '') {
             inputGroup.classList.remove('invalid');
             if (validationHint && validationHint.classList.contains('validation-hint')) {
                 validationHint.remove();
             }
+            checkButton.disabled = !isDomainEnabled;
             return;
         }
 
-        if (isValid) {
+        if (isValid && isDomainEnabled) {
             inputGroup.classList.remove('invalid');
             if (validationHint && validationHint.classList.contains('validation-hint')) {
                 validationHint.remove();
             }
+            checkButton.disabled = false;
         } else {
             inputGroup.classList.add('invalid');
             if (!validationHint || !validationHint.classList.contains('validation-hint')) {
                 const hint = document.createElement('div');
                 hint.className = 'validation-hint error';
-                hint.textContent = getValidationMessage(value);
+                hint.textContent = !isDomainEnabled ? '所选域名暂停开放申请' : getValidationMessage(value);
                 inputGroup.parentElement.insertBefore(hint, inputGroup.nextSibling);
             }
+            checkButton.disabled = true;
         }
-
-        checkButton.disabled = !isValid || value === '';
     });
 
     // 回车键检测
@@ -415,7 +450,15 @@ function initSubdomainChecker() {
     // 检测子域名可用性
     async function checkSubdomain() {
         const subdomain = subdomainInput.value.toLowerCase().trim();
+        const selectedDomain = domainSelect.value;
+        
         if (!validateSubdomain(subdomain)) return;
+        
+        // 检查域名是否开放
+        if (!domainConfig[selectedDomain]?.enabled) {
+            showResult('domain-paused', '域名暂停开放', `${selectedDomain} 域名暂时不开放申请`, '请选择其他域名');
+            return;
+        }
 
         // 显示加载状态
         checkButton.disabled = true;
@@ -430,13 +473,14 @@ function initSubdomainChecker() {
             }
 
             // 检查是否已被注册
-            if (registeredDomains.has(subdomain)) {
-                showResult('unavailable', '域名不可用', `"${subdomain}" 已被其他用户注册`, '已注册');
+            const domainSet = registeredDomains.get(selectedDomain) || new Set();
+            if (domainSet.has(subdomain)) {
+                showResult('unavailable', '域名不可用', `"${subdomain}.${selectedDomain}" 已被其他用户注册`, '已注册');
                 return;
             }
 
             // 域名可用
-            showResult('available', '域名可用！', `"${subdomain}.ciao.su" 可以申请`, '');
+            showResult('available', '域名可用！', `"${subdomain}.${selectedDomain}" 可以申请`, '');
 
         } catch (error) {
             console.error('检测失败:', error);
@@ -444,7 +488,8 @@ function initSubdomainChecker() {
         } finally {
             // 恢复按钮状态
             setTimeout(() => {
-                checkButton.disabled = false;
+                const isDomainEnabled = domainConfig[domainSelect.value]?.enabled;
+                checkButton.disabled = !isDomainEnabled || !subdomainInput.value.trim();
                 checkButton.classList.remove('loading');
                 checkButton.textContent = '检测';
             }, 500);
@@ -461,7 +506,8 @@ function initSubdomainChecker() {
         const icons = {
             available: '✅',
             unavailable: '❌',
-            error: '⚠️'
+            error: '⚠️',
+            'domain-paused': '⏸️'
         };
         resultIcon.textContent = icons[type];
 
@@ -484,69 +530,63 @@ function initSubdomainChecker() {
     }
 
     // 加载已注册的域名数据
-    async function loadRegisteredDomains() {
+    async function loadRegisteredDomains(specificDomain = null) {
+        const domainsToLoad = specificDomain ? [specificDomain] : Object.keys(domainConfig);
+        
         try {
             // 显示加载状态
             recentDomainsList.innerHTML = '<div class="loading">正在加载域名数据...</div>';
             
-            // 使用更稳定的 GitHub API 调用方式
-            const apiUrl = 'https://api.github.com/repos/bestzwei/LibreDomains/contents/domains/ciao.su';
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'LibreDomains-Checker/1.0'
-                },
-                cache: 'no-cache'
-            });
-            
-            if (!response.ok) {
-                // 如果 API 调用失败，使用备用方案
-                console.warn(`GitHub API failed with status: ${response.status}`);
-                await loadDomainsFromBackup();
-                return;
-            }
-            
-            const files = await response.json();
-            
-            // 验证响应格式
-            if (!Array.isArray(files)) {
-                throw new Error('Invalid API response format');
-            }
-            
-            const domainFiles = files.filter(file => 
-                file.name && 
-                file.name.endsWith('.json') && 
-                file.name !== 'example.json' &&
-                file.type === 'file'
-            );
-
-            // 提取域名列表
-            registeredDomains.clear();
-            const recentDomains = [];
-
-            domainFiles.forEach(file => {
-                const domainName = file.name.replace('.json', '');
-                if (domainName && /^[a-z0-9-]+$/.test(domainName)) {
-                    registeredDomains.add(domainName);
-                    recentDomains.push({
-                        name: domainName,
-                        url: file.html_url || '#',
-                        size: file.size || 0
+            for (const domain of domainsToLoad) {
+                const domainPath = domainConfig[domain]?.path || domain;
+                const apiUrl = `https://api.github.com/repos/bestzwei/LibreDomains/contents/domains/${domainPath}`;
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'LibreDomains-Checker/1.0'
+                        },
+                        cache: 'no-cache'
                     });
+                    
+                    if (!response.ok) {
+                        console.warn(`GitHub API failed for ${domain} with status: ${response.status}`);
+                        continue;
+                    }
+                    
+                    const files = await response.json();
+                    
+                    if (!Array.isArray(files)) {
+                        continue;
+                    }
+                    
+                    const domainFiles = files.filter(file => 
+                        file.name && 
+                        file.name.endsWith('.json') && 
+                        file.name !== 'example.json' &&
+                        file.type === 'file'
+                    );
+
+                    // 存储到对应域名的 Set 中
+                    const domainSet = new Set();
+                    domainFiles.forEach(file => {
+                        const domainName = file.name.replace('.json', '');
+                        if (domainName && /^[a-z0-9-]+$/.test(domainName)) {
+                            domainSet.add(domainName);
+                        }
+                    });
+                    
+                    registeredDomains.set(domain, domainSet);
+                    
+                } catch (domainError) {
+                    console.error(`加载 ${domain} 域名数据失败:`, domainError);
                 }
-            });
-
-            // 按名称排序
-            recentDomains.sort((a, b) => a.name.localeCompare(b.name));
-
-            // 更新统计信息
-            if (totalDomainsSpan) {
-                totalDomainsSpan.textContent = registeredDomains.size;
             }
 
-            // 显示最近注册的域名（最多显示12个）
-            displayRecentDomains(recentDomains.slice(0, 12));
+            // 更新显示
+            updateDisplay();
 
         } catch (error) {
             console.error('加载域名数据失败:', error);
@@ -554,38 +594,51 @@ function initSubdomainChecker() {
         }
     }
 
-    // 备用数据加载方案
-    async function loadDomainsFromBackup() {
-        try {
-            // 使用已知的域名作为备用数据
-            const knownDomains = ['cc', 'example']; // 从你提供的文件中已知的域名
-            
-            registeredDomains.clear();
-            knownDomains.forEach(domain => {
-                if (domain !== 'example') { // 排除示例文件
-                    registeredDomains.add(domain);
-                }
-            });
+    // 更新显示
+    function updateDisplay() {
+        const selectedDomain = domainSelect.value;
+        const currentDomainSet = registeredDomains.get(selectedDomain) || new Set();
+        
+        // 更新统计信息
+        if (totalDomainsSpan) {
+            totalDomainsSpan.textContent = currentDomainSet.size;
+        }
 
-            if (totalDomainsSpan) {
-                totalDomainsSpan.textContent = registeredDomains.size;
-            }
-
-            const backupDomains = Array.from(registeredDomains).map(name => ({
+        // 显示最近注册的域名
+        const recentDomains = Array.from(currentDomainSet)
+            .sort()
+            .slice(0, 12)
+            .map(name => ({
                 name,
                 url: '#',
                 size: 0
             }));
 
-            displayRecentDomains(backupDomains);
+        displayRecentDomains(recentDomains);
+    }
 
-            // 显示提示信息
+    // 备用数据加载方案
+    async function loadDomainsFromBackup() {
+        try {
+            const knownDomains = ['cc', 'example'];
+            
+            registeredDomains.clear();
+            const ciaoSuSet = new Set();
+            knownDomains.forEach(domain => {
+                if (domain !== 'example') {
+                    ciaoSuSet.add(domain);
+                }
+            });
+            registeredDomains.set('ciao.su', ciaoSuSet);
+
+            updateDisplay();
+
             if (recentDomainsList.children.length === 0) {
                 recentDomainsList.innerHTML = `
                     <div class="error-message">
                         无法连接到 GitHub API，显示的是缓存数据。
                         <br>完整数据请访问 
-                        <a href="https://github.com/bestzwei/LibreDomains/tree/main/domains/ciao.su" 
+                        <a href="https://github.com/bestzwei/LibreDomains/tree/main/domains" 
                            target="_blank" style="color: var(--primary-color);">GitHub 仓库</a>
                     </div>
                 `;
@@ -597,7 +650,7 @@ function initSubdomainChecker() {
                 recentDomainsList.innerHTML = `
                     <div class="error-message">
                         数据加载失败，请检查网络连接或稍后重试
-                        <br><a href="https://github.com/bestzwei/LibreDomains/tree/main/domains/ciao.su" 
+                        <br><a href="https://github.com/bestzwei/LibreDomains/tree/main/domains" 
                                target="_blank" style="color: var(--primary-color);">查看完整域名列表</a>
                     </div>
                 `;
@@ -605,7 +658,7 @@ function initSubdomainChecker() {
         }
     }
 
-    // 显示最近注册的域名 - 改进版本
+    // 显示最近注册的域名
     function displayRecentDomains(domains) {
         if (!recentDomainsList) return;
 
@@ -623,7 +676,7 @@ function initSubdomainChecker() {
 
         recentDomainsList.innerHTML = domainsHtml;
 
-        // 添加点击效果 - 改进版本
+        // 添加点击效果
         const domainItems = recentDomainsList.querySelectorAll('.domain-item');
         domainItems.forEach(item => {
             item.addEventListener('click', function() {
@@ -651,8 +704,11 @@ function initSubdomainChecker() {
         });
     }
 
+    // 初始化时触发域名选择事件
+    domainSelect.dispatchEvent(new Event('change'));
+
     // 减少自动刷新频率以避免API限制
-    setInterval(loadRegisteredDomains, 10 * 60 * 1000); // 改为10分钟
+    setInterval(() => loadRegisteredDomains(), 10 * 60 * 1000); // 10分钟
 }
 
 // 禁用 Cloudflare RUM 相关错误

@@ -77,29 +77,26 @@
 
         <section id="domains" class="domains">
             <div class="container">
-                <h2>可用域名</h2>
-                <div class="domains-grid">
-                    <div class="domain-card available">
-                        <h3>ciao.su</h3>
-                        <span class="status">✅ 可用</span>
-                        <p>主要域名，正在开放申请</p>
-                    </div>
-                    <div class="domain-card paused">
-                        <h3>ciallo.de</h3>
-                        <span class="status">⏸️ 暂停开放</span>
-                        <p>备用域名，暂时不开放申请</p>
-                    </div>
-                </div>
+                <h2>子域名查询</h2>
+                <p class="section-description">检查你想要的子域名是否可用，选择合适的主域名进行申请</p>
 
-                <!-- 新增：子域名检测功能 -->
+                <!-- 子域名检测功能 -->
                 <div class="subdomain-checker">
                     <h3>🔍 检测子域名可用性</h3>
-                    <p>输入你想要的子域名，我们会检测是否可以申请</p>
+                    <p>选择主域名并输入你想要的子域名，我们会实时检测是否可以申请</p>
                     
                     <div class="checker-form">
+                        <div class="domain-selector">
+                            <label for="domainSelect">选择主域名：</label>
+                            <select id="domainSelect" class="domain-select">
+                                <option value="ciao.su" data-status="available">ciao.su (可用)</option>
+                                <option value="ciallo.de" data-status="paused">ciallo.de (暂停开放)</option>
+                            </select>
+                        </div>
+
                         <div class="input-group">
                             <input type="text" id="subdomainInput" placeholder="输入子域名" maxlength="63">
-                            <span class="domain-suffix">.ciao.su</span>
+                            <span class="domain-suffix" id="domainSuffix">.ciao.su</span>
                             <button id="checkButton" class="btn btn-primary">检测</button>
                         </div>
                         
@@ -292,6 +289,9 @@
         </div>
     </footer>
 
+    <script src="script.js"></script>
+</body>
+</html>
     <script src="script.js"></script>
 </body>
 </html>
