@@ -15,7 +15,7 @@
     {
       "type": "CNAME",
       "name": "www",
-      "content": "boosoyz.github.io",
+      "content": "koyeb-16u.pages.dev",
       "ttl": 3600,
       "proxied": true
     }
