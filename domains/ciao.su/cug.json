@@ -1,0 +1,16 @@
+{
+  "owner": {
+    "name": "Marjorie",
+    "github": "heyueshisan",
+    "email": "heyue572@gmail.com"
+  },
+  "records": [
+    {
+      "type": "CNAME",
+      "name": "cug",
+      "content": "it-tools-260.pages.dev",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}
