@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'domains/**/*.json'
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'domains/**/*.json'
 
 jobs:
   validate-domain:
@@ -12,11 +16,14 @@ jobs:
     permissions:
       contents: read
       actions: read
-      pull-requests: read
+      pull-requests: write  # 允许写入 PR 评论
+      checks: write         # 允许创建检查状态
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
+          # 对于 pull_request_target，检出 PR 的代码
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
         
       - name: 设置 Python
@@ -34,29 +41,92 @@ jobs:
         with:
           files: 'domains/**/*.json'
           separator: ' '
+          # 对于 pull_request_target，需要指定 base 和 head
+          base_sha: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || '' }}
+          sha: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || '' }}
       
       - name: 验证域名配置
         if: steps.changed-files.outputs.all_changed_files != ''
+        id: validate
         run: |
           echo "=== 开始验证域名配置 ==="
+          echo "工作流类型: ${{ github.event_name }}"
           echo "更改的文件: ${{ steps.changed-files.outputs.all_changed_files }}"
           echo "PR作者: ${{ github.event.pull_request.user.login }}"
-          echo "检查保留子域名: 启用"
+          echo "仓库: ${{ github.repository }}"
           echo ""
           
-          # 运行验证脚本并直接输出到控制台，包含所有权验证和保留子域名检查
+          # 创建输出文件
+          mkdir -p output
+          
+          # 运行验证脚本
           if python scripts/bot/pr_checker.py \
             --files ${{ steps.changed-files.outputs.all_changed_files }} \
             --pr-author "${{ github.event.pull_request.user.login }}" \
             --repo-owner "${{ github.repository_owner }}" \
             --repo-name "${{ github.event.repository.name }}" \
             --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --output output/validation_result.md \
             --debug; then
+            echo "validation_success=true" >> $GITHUB_OUTPUT
             echo ""
             echo "🎉 所有域名配置验证通过！"
           else
+            echo "validation_success=false" >> $GITHUB_OUTPUT
             echo ""
-            echo "❌ 域名配置验证失败，请查看上方的详细错误信息。"
+            echo "❌ 域名配置验证失败，请查看详细错误信息。"
+          fi
+      
+      - name: 发布 PR 评论 (仅主仓库)
+        if: github.event_name == 'pull_request_target' && steps.changed-files.outputs.all_changed_files != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'output/validation_result.md';
+            
+            if (fs.existsSync(path)) {
+              const body = fs.readFileSync(path, 'utf8');
+              
+              // 查找现有的机器人评论
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('🤖 域名配置验证结果')
+              );
+              
+              if (botComment) {
+                // 更新现有评论
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+              } else {
+                // 创建新评论
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            }
+      
+      - name: 设置检查状态
+        if: steps.changed-files.outputs.all_changed_files != ''
+        run: |
+          if [ "${{ steps.validate.outputs.validation_success }}" == "true" ]; then
+            echo "✅ 验证通过 - PR 可以合并"
+            exit 0
+          else
+            echo "❌ 验证失败 - PR 需要修复问题"
             exit 1
           fi
       
