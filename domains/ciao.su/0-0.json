@@ -18,6 +18,13 @@
       "content": "dsblkkk.github.io",
       "ttl": 3600,
       "proxied": true
-    }
+    },
+{
+"type": "CNAME",
+"name": "dh",
+"content": "dh.ssooss.hidns.vip",
+"ttl": 3600,
+"proxied": true
+}
   ]
 }
