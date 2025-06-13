@@ -17,6 +17,8 @@ on:
 
 jobs:
   deploy:
+    # 添加仓库检查，确保只在主仓库运行
+    if: github.repository == 'bestzwei/LibreDomains' 
     runs-on: ubuntu-latest
     permissions:
       contents: read
