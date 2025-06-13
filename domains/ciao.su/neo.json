@@ -1,0 +1,16 @@
+{
+  "owner": {
+    "name": "William Wu",
+    "github": "Neomanbeta",
+    "email": "neoman@gmail.com"
+  },
+  "records": [
+    {
+      "type": "A",
+      "name": "@",
+      "content": "193.123.233.25",
+      "ttl": 3600,
+      "proxied": true
+    }
+  ]
+}
